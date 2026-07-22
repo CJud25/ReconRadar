@@ -1,0 +1,7 @@
+{
+ "results": [
+  {"subaward_number": "1", "recipient_name": "ExampleWorks Janitorial Sub LLC", "amount": 45250.00, "action_date": "2025-02-14", "description": "Custodial support services"},
+  {"subaward_number": "2", "recipient_name": "Sample Facility Partners Inc", "amount": 12000.50, "action_date": "2025-05-01", "description": "Grounds maintenance"}
+ ],
+ "page_metadata": {"page": 1, "hasNext": false}
+}

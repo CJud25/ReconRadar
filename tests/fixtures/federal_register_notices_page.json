@@ -1,0 +1,11 @@
+{
+ "count": 3070,
+ "total_pages": 154,
+ "next_page_url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bagencies%5D%5B%5D=committee-for-purchase-from-people-who-are-blind-or-severely-disabled&conditions%5Btype%5D%5B%5D=NOTICE&order=newest&page=2&per_page=20",
+ "results": [
+  {"title": "Procurement List; Proposed Deletions", "document_number": "2026-14305", "publication_date": "2026-07-16", "html_url": "https://www.federalregister.gov/documents/2026/07/16/2026-14305/procurement-list-proposed-deletions", "type": "Notice"},
+  {"title": "Procurement List; Proposed Additions and Deletions", "document_number": "2026-13840", "publication_date": "2026-07-09", "html_url": "https://www.federalregister.gov/documents/2026/07/09/2026-13840/procurement-list-proposed-additions-and-deletions", "type": "Notice"},
+  {"title": "Procurement List; Deletions", "document_number": "2026-13839", "publication_date": "2026-07-09", "html_url": "https://www.federalregister.gov/documents/2026/07/09/2026-13839/procurement-list-deletions", "type": "Notice"}
+ ],
+ "description": "Documents from the Committee for Purchase From People Who Are Blind or Severely Disabled, published in the Federal Register."
+}

@@ -1,0 +1,6 @@
+{
+ "results": [
+  {"subaward_number": "9", "recipient_name": "Sample Truncated Sub Co", "amount": 5000.00, "action_date": "2025-01-01", "description": "Delivery support"}
+ ],
+ "page_metadata": {"page": 1, "hasNext": true}
+}

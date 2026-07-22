@@ -1,0 +1,9 @@
+{
+ "limit": 3,
+ "results": [
+  {"internal_id": 350871436, "Award ID": "ZSMG", "Recipient Name": "TEXTAINER EQUIPMENT MANAGEMENT (U.S.) LIMITED", "Award Amount": 7112.26, "Contract Award Type": "DELIVERY ORDER", "Awarding Agency": "Department of Defense", "Awarding Sub Agency": "Department of the Army", "NAICS": {"code": "532411", "description": "COMMERCIAL AIR, RAIL, AND WATER TRANSPORTATION EQUIPMENT RENTAL AND LEASING"}, "PSC": {"code": "V119", "description": "TRANSPORTATION/TRAVEL/RELOCATION- TRANSPORTATION: OTHER"}, "Start Date": "2018-02-02", "End Date": "2019-03-20", "generated_internal_id": "CONT_AWD_ZSMG_9700_HTC71114DR027_9700"},
+  {"internal_id": 350871435, "Award ID": "ZSMG", "Recipient Name": "TEXTAINER EQUIPMENT MANAGEMENT (U.S.) LIMITED", "Award Amount": 3722.0, "Contract Award Type": "DO", "Awarding Agency": "Department of Defense", "Awarding Sub Agency": "Department of the Army", "NAICS": {"code": "532411", "description": "COMMERCIAL AIR, RAIL, AND WATER TRANSPORTATION EQUIPMENT RENTAL AND LEASING"}, "PSC": {"code": "W081", "description": "LEASE OR RENTAL OF EQUIPMENT- CONTAINERS, PACKAGING, AND PACKING SUPPLIES"}, "Start Date": "2013-02-05", "End Date": "2013-07-18", "generated_internal_id": "CONT_AWD_ZSMG_9700_HTC71109D0002_9700"},
+  {"internal_id": 350871434, "Award ID": "ZSMG", "Recipient Name": "TEXTAINER EQUIPMENT MANAGEMENT (U.S.) LIMITED", "Award Amount": 2073.0, "Contract Award Type": "DELIVERY ORDER", "Awarding Agency": "Department of Defense", "Awarding Sub Agency": "Department of the Army", "NAICS": {"code": "532411", "description": "COMMERCIAL AIR, RAIL, AND WATER TRANSPORTATION EQUIPMENT RENTAL AND LEASING"}, "PSC": {"code": "W023", "description": "LEASE OR RENTAL OF EQUIPMENT- GROUND EFFECT VEHICLES, MOTOR VEHICLES, TRAILERS, AND CYCLES"}, "Start Date": "2008-02-13", "End Date": "2009-02-19", "generated_internal_id": "CONT_AWD_ZSMG_9700_DAMT0103D0173_9700"}
+ ],
+ "page_metadata": {"page": 1, "hasNext": false}
+}

@@ -1,0 +1,16 @@
+{
+ "piid": "47QRAA24D0012",
+ "generated_unique_award_id": "CONT_AWD_47QRAA24D0012_4732_47QRAA24D0012_4732",
+ "total_obligation": 100000.0,
+ "base_and_all_options": 250000.0,
+ "date_signed": "2024-06-01",
+ "type": "D",
+ "type_description": "DEFINITIVE CONTRACT",
+ "category": "contract",
+ "description": "JOINT ADDITIVE MANUFACTURING MODEL EXCHANGE (JAMMEX) DEVELOPMENT AND SUSTAINMENT",
+ "period_of_performance": {"start_date": "2024-06-01", "end_date": "2025-05-31", "last_modified_date": "2024-06-05", "potential_end_date": "2028-05-31 00:00:00"},
+ "place_of_performance": {"city_name": "FORT BELVOIR", "county_name": "FAIRFAX", "state_code": "VA", "location_country_code": "USA"},
+ "awarding_agency": {"toptier_agency": {"name": "General Services Administration", "code": "047", "abbreviation": "GSA"}, "subtier_agency": {"name": "Public Buildings Service", "code": "4732", "abbreviation": "PBS"}, "office_agency_name": "PBS R4 SERVICE CONTRACTS"},
+ "recipient": {"recipient_name": "EXAMPLEWORKS SERVICES LLC", "recipient_uei": "EXMP1234ABC7", "business_categories": ["Category Business", "Small Business"]},
+ "latest_transaction_contract_data": {"type_set_aside": "SBA", "type_set_aside_description": "SMALL BUSINESS SET ASIDE - TOTAL", "extent_competed": "D", "extent_competed_description": "FULL AND OPEN COMPETITION AFTER EXCLUSION OF SOURCES", "number_of_offers_received": 3, "naics": "561720", "naics_description": "JANITORIAL SERVICES", "product_or_service_code": "S201", "product_or_service_description": "HOUSEKEEPING- CUSTODIAL JANITORIAL", "solicitation_procedures_description": "NEGOTIATED PROPOSAL/QUOTE", "multiple_or_single_award_description": "SINGLE AWARD", "referenced_idv_agency_iden": "4732"}
+}

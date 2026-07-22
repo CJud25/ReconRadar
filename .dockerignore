@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+.pytest_cache
+**/__pycache__
+**/*.py[cod]
+.streamlit/secrets.toml
+tests
+requirements-dev.txt
+data/runtime
+data/public_cache
+*.sqlite
+*.sqlite3

@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest-*/
+.streamlit/secrets.toml
+.venv/
+data/runtime/
+data/public_cache/
+*.sqlite
+*.sqlite3
+.testdeps/
+.ai/
+.test-tmp/

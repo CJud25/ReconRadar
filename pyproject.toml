@@ -1,0 +1,19 @@
+[project]
+name = "reconradar"
+version = "1.0.0"
+description = "Cited, score-free Opportunity Packet and public-evidence case tracker for AbilityOne NPA business development"
+requires-python = ">=3.11"
+dependencies = [
+  "streamlit==1.46.1",
+  "pandas==2.3.3",
+  "numpy==2.5.1; python_version >= '3.12'",
+  "numpy==2.4.6; python_version < '3.12'",
+]
+
+[project.optional-dependencies]
+dev = ["openpyxl==3.1.5", "pytest==8.4.1"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,28 @@
+{
+  "schema_version": "radar-handoff/v1",
+  "snapshot_date": "2026-07-15",
+  "piid": "SYNTH-A2-0001",
+  "radar_source_label": "GovConRadar 2.8.0 (SYNTHETIC sample)",
+  "synthetic_sample": true,
+  "claims": {
+    "referenced_idv_piid": null,
+    "recipient_name": "SYNTHETIC EXAMPLE SERVICES LLC",
+    "recipient_uei": "SYNTHUEI0001A",
+    "awarding_subagency": "SYNTHETIC Public Buildings Service",
+    "naics_code": "561720",
+    "psc_code": "S201",
+    "type_of_set_aside_code": null,
+    "extent_competed_code": "D",
+    "number_of_offers_received": 4,
+    "total_obligation": 180000.0,
+    "base_and_all_options": 420000.0,
+    "pop_start_date": "2024-06-01",
+    "pop_current_end_date": "2025-05-31",
+    "pop_potential_end_date": "2028-05-31",
+    "place_of_performance": {
+      "city": "Denver",
+      "county": "Denver",
+      "state": "co"
+    }
+  }
+}

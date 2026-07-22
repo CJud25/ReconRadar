@@ -1,0 +1,10 @@
+{
+ "count": 2,
+ "total_pages": 1,
+ "next_page_url": null,
+ "results": [
+  {"title": "Sunshine Act Meeting", "document_number": "2026-11111", "publication_date": "2026-06-01", "html_url": "https://www.federalregister.gov/documents/2026/06/01/2026-11111/sunshine-act-meeting", "type": "Notice"},
+  {"title": "Procurement List; Additions", "document_number": "2026-11112", "publication_date": "2026-06-02", "html_url": "https://www.federalregister.gov/documents/2026/06/02/2026-11112/procurement-list-additions", "type": "Notice"}
+ ],
+ "description": "Documents from the Committee for Purchase From People Who Are Blind or Severely Disabled, published in the Federal Register."
+}

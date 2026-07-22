@@ -1,0 +1,7 @@
+{
+ "limit": 25,
+ "results": [
+  {"internal_id": 411223344, "Award ID": "47QRAA24D0012", "Recipient Name": "EXAMPLEWORKS SERVICES LLC", "Award Amount": 100000.0, "Contract Award Type": "DEFINITIVE CONTRACT", "Awarding Agency": "General Services Administration", "Awarding Sub Agency": "Public Buildings Service", "NAICS": {"code": "561720", "description": "JANITORIAL SERVICES"}, "PSC": {"code": "S201", "description": "HOUSEKEEPING- CUSTODIAL JANITORIAL"}, "Start Date": "2024-06-01", "End Date": "2025-05-31", "generated_internal_id": "CONT_AWD_47QRAA24D0012_4732_47QRAA24D0012_4732"}
+ ],
+ "page_metadata": {"page": 1, "hasNext": false}
+}

@@ -68,7 +68,7 @@ exports only — no person-level data. The bundled demo data is synthetic and
 validated on every test run. Counsel-gated regulatory claims are excluded from
 every rendered surface, test-enforced.
 
-563 tests run in CI, including mutation-tested guards for markdown-injection,
+563 tests run in CI, including dedicated guards for markdown-injection,
 counsel-gated vocabulary, and the no-score rule.
 
 ## License

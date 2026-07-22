@@ -24,7 +24,7 @@ a suitability determination — the Commission determines suitability.
   SQLite case/evidence ledger is written (default `data/runtime/`).
 - **Inputs the analyst brings per opportunity**:
   - A `radar-handoff/v1` JSON from GovConRadar's Contract Detail page
-    ("Download ReconOps handoff") — or a pasted PIID with no handoff.
+    ("Download ReconRadar handoff") — or a pasted PIID with no handoff.
   - A current **AbilityOne PL Services workbook** (analyst-retrieved; the
     upload asks you to attest the retrieval date — attest honestly, it is
     printed in the export).

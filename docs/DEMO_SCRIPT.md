@@ -144,7 +144,7 @@ to explicit human review.
   evidence was never attached are omitted from the body and listed as not included,
   with the reason, in the export's Section ledger.
 - **Radar handoff:** the upload comes from GovConRadar's Contract Detail page
-  ("Download ReconOps handoff"). Until that producer is deployed to the Radar app
+  ("Download ReconRadar handoff"). Until that producer is deployed to the Radar app
   you're demoing from, use the bundled SYNTHETIC example — same contract shape,
   clearly labeled synthetic.
 - **Stale-state guards:** results re-attach only while their inputs still match

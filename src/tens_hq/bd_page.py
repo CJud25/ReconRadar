@@ -212,25 +212,33 @@ def _cases_frame(repo: CaseRepository, cases: list[Any]) -> pd.DataFrame:
     the per-row freshness recompute is intended, not an N+1 concern.
     """
 
-    return pd.DataFrame(
-        [
-            {
-                "case_id": case.case_id,
-                "title": case.title,
-                "location": f"{case.city}, {case.state_code}" + (f" {case.postal_code}" if case.postal_code else ""),
-                "state": repo.displayed_state(case).value,
-                "team": case.team_alias,
-                "role": case.role_alias,
-                "contract": case.contract_type or "",
-                "service": case.service_type or "",
-                "headcount": case.target_headcount or "",
-                "start": case.target_start_date or "",
-                "job families": ", ".join(case.job_family_requirements),
-                "version": case.version,
-            }
-            for case in cases
-        ]
-    )
+    rows = [
+        {
+            "title": case.title,
+            "location": f"{case.city}, {case.state_code}" + (f" {case.postal_code}" if case.postal_code else ""),
+            "state": repo.displayed_state(case).value,
+            "team": case.team_alias,
+            "role": case.role_alias,
+            "contract": case.contract_type or "",
+            "service": case.service_type or "",
+            "headcount": case.target_headcount or "",
+            "start": case.target_start_date or "",
+            "job families": ", ".join(case.job_family_requirements),
+            "case_id": case.case_id,
+        }
+        for case in cases
+    ]
+    # Optional columns that are empty across the whole current caseload add
+    # visual noise for no information; drop them from the displayed frame
+    # (case_id, the internal id, stays available on every row -- just last
+    # and not the widest, leading column; `version`, an internal optimistic-
+    # concurrency detail, is not user-facing and is dropped entirely).
+    optional_columns = ("contract", "service", "headcount", "start", "job families")
+    for column in optional_columns:
+        if rows and all(not row[column] for row in rows):
+            for row in rows:
+                del row[column]
+    return pd.DataFrame(rows)
 
 
 def _render_cases(repo: CaseRepository) -> None:

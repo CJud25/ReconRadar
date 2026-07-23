@@ -734,3 +734,51 @@ def test_service_review_does_not_substitute_for_geographic_review(tmp_path) -> N
         assert states["geographic_relevance"] != "verified"
     finally:
         repository.close()
+
+
+def test_cases_frame_leads_with_title_and_drops_internal_columns(tmp_path) -> None:
+    # §6.2: the Cases table's default developer-table feel (leading raw
+    # UUID, internal `version`) undersells the product. Human-readable
+    # fields lead; the raw case_id is available but last, not first/widest;
+    # `version` (an internal optimistic-concurrency detail) is dropped.
+    from tens_hq.bd_page import _cases_frame
+
+    repository = CaseRepository(tmp_path / "cases-frame.sqlite3")
+    try:
+        case = repository.create_case(
+            "Denver review",
+            "Denver",
+            "CO",
+            "80202",
+            contract_type="IDIQ",
+            service_type="Custodial",
+            target_headcount=12,
+            target_start_date="2027-01-01",
+            job_family_requirements=("Custodial",),
+        )
+        frame = _cases_frame(repository, [case])
+        columns = list(frame.columns)
+        assert "version" not in columns
+        assert columns[0] == "title"
+        assert columns.index("case_id") == len(columns) - 1
+        assert columns[:5] == ["title", "location", "state", "team", "role"]
+        # `state` still carries the live freshness-derived display state, not
+        # the persisted value -- unchanged semantics, just reordered.
+        assert frame.iloc[0]["state"] == repository.displayed_state(case).value
+    finally:
+        repository.close()
+
+
+def test_cases_frame_drops_all_empty_optional_columns(tmp_path) -> None:
+    from tens_hq.bd_page import _cases_frame
+
+    repository = CaseRepository(tmp_path / "cases-frame-empty.sqlite3")
+    try:
+        case = repository.create_case("Denver review", "Denver", "CO")
+        frame = _cases_frame(repository, [case])
+        columns = list(frame.columns)
+        for optional in ("contract", "service", "headcount", "start", "job families"):
+            assert optional not in columns
+        assert columns == ["title", "location", "state", "team", "role", "case_id"]
+    finally:
+        repository.close()

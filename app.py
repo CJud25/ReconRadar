@@ -141,17 +141,13 @@ def main() -> None:
             # The guided tour is a demo aid; a pilot session is real work.
             _render_guided_demo()
             st.markdown("---")
-        if pilot_mode or page == "BD Feasibility":
-            # The public scanner is deliberately independent from the
-            # synthetic planning model; do not show controls that could make
-            # a directory row look like a forecast or feasibility score.
-            scenario = "Base"
-            target_pct = DEFAULT_TARGET * 100.0
-        else:
-            st.markdown("**Planning controls**")
-            scenario = st.selectbox("Scenario", ["Base", "Conservative", "Optimistic"])
-            target_pct = st.slider("Planning target", 70.0, 82.0, DEFAULT_TARGET * 100.0, 0.5)
-            st.caption("Site indicators are planning proxies. They are not official ODLH determinations.")
+        # Both page renderers immediately `del` these args (pages.py,
+        # bd_page.py) -- the "Planning controls" selectbox/slider changed
+        # nothing on the Governance page and invited a reviewer to distrust
+        # a trust page (§5.10). scenario/target_pct stay defined as harmless
+        # constants for the PAGE_RENDERERS(...) call below.
+        scenario = "Base"
+        target_pct = DEFAULT_TARGET * 100.0
         st.markdown("---")
         st.caption(f"Demo v{APP_VERSION} · Seed {DEFAULT_SEED}")
 

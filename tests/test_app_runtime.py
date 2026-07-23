@@ -90,6 +90,11 @@ def test_packet_pages_render_without_streamlit_exception():
 
     app.radio[0].set_value("Privacy & Governance").run()
     assert not app.exception, "Privacy & Governance"
+    # §5.10: the dead "Planning controls" (Scenario selectbox, Planning
+    # target slider) never changed anything on the Governance page and are
+    # removed -- in normal (non-pilot) mode, not just pilot mode.
+    assert not any(widget.label == "Scenario" for widget in app.selectbox)
+    assert not any(widget.label == "Planning target" for widget in app.slider)
 
 
 def test_guided_demo_navigation_is_callback_safe_and_resumes_from_query_params():

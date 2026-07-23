@@ -97,6 +97,33 @@ def test_packet_pages_render_without_streamlit_exception():
     assert not any(widget.label == "Planning target" for widget in app.slider)
 
 
+def test_governance_page_describes_only_shipped_capabilities():
+    # §5.1 / ADR-024: the Decision-boundaries block used to name capabilities
+    # that were deleted with ADR-016 (site views, source scores, organization
+    # scenarios, small-sample shrinkage, the start-stage gate) -- a
+    # self-contradiction two lines from the page's own no-score thesis. Assert
+    # the forbidden phrases are gone and the on-thesis bullet survives.
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("Privacy & Governance").run()
+    assert not app.exception
+
+    rendered = "\n".join(block.value for block in app.markdown).lower()
+    for forbidden in (
+        "site views",
+        "source scores",
+        "organization scenarios",
+        "small-sample shrinkage",
+        "start-stage gate",
+        "summed hours",
+    ):
+        assert forbidden not in rendered, forbidden
+
+    assert "never a feasibility score" in rendered
+    assert "bid/no-bid" in rendered
+
+
 def test_guided_demo_navigation_is_callback_safe_and_resumes_from_query_params():
     app_path = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)

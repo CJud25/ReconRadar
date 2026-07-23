@@ -79,7 +79,7 @@ def _render_guided_demo() -> None:
     st.markdown(f"**{beat.title}**")
     st.caption(beat.sentence)
     st.caption(f"Point at: {beat.highlight}")
-    controls = st.columns(3)
+    controls = st.columns([1, 2, 1])
     controls[0].button(
         "◀",
         key="tour_previous",

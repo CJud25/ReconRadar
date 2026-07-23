@@ -12,8 +12,8 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
-
 from conftest import counsel_gate_violations
+
 from tens_hq import bd_page
 from tens_hq.demo_tour import DEMO_TOUR
 from tens_hq.pages import PAGE_RENDERERS

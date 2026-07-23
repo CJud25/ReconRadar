@@ -10,7 +10,12 @@ from streamlit.testing.v1 import AppTest
 
 from tens_hq import bd_page as bd_page_module
 from tens_hq.case_store import CaseRepository
-from tens_hq.connectors import AwardCandidate, ContractFactsRecord, ContractFactsResolution, GeographyRecord
+from tens_hq.connectors import (
+    AwardCandidate,
+    ContractFactsRecord,
+    ContractFactsResolution,
+    GeographyRecord,
+)
 
 # The deterministic synthetic generator is CPU-heavy on this stack (tens of
 # seconds on Python 3.14 + pandas 3.0). app.py wraps it in load_demo_data via

@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import io
 import json
+import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
-import urllib.error
 
 import pytest
 
-from tens_hq.connectors import SourceKind, WORKBOOK_SOURCE_KINDS
+from tens_hq.connectors import WORKBOOK_SOURCE_KINDS, SourceKind
 from tens_hq.connectors.api import http_post
 from tens_hq.connectors.base import ConnectorError
 from tens_hq.connectors.usaspending import (

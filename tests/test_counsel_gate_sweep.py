@@ -16,8 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from conftest import counsel_gate_violations
+
 import tens_hq
 
 _SRC_ROOT = Path(tens_hq.__file__).resolve().parent

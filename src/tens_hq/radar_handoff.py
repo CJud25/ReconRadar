@@ -45,10 +45,10 @@ it is a packet-local pure parse, like ``pl_match.py``). See ADR-019.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date
 import json
 import re
+from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 RADAR_HANDOFF_SCHEMA_VERSION = "radar-handoff/v1"

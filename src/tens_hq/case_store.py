@@ -13,18 +13,16 @@ person identifiers and sensitive narratives before a transaction begins.
 
 from __future__ import annotations
 
+import json
+import sqlite3
+import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-import json
 from pathlib import Path
-import sqlite3
-from hashlib import sha256
-import uuid
-from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
+from typing import Any, Callable, Iterable, Iterator, Mapping
 
 from .cases import (
-    ALLOWED_TRANSITIONS,
     Case,
     CaseCreate,
     CaseState,
@@ -1362,7 +1360,9 @@ class CaseRepository:
             result: list[ScanRun] = []
             for item in running:
                 scan = conn.execute("SELECT * FROM scan_runs WHERE scan_id=?", (item["scan_id"],)).fetchone()
-                case = self._require_case(conn, scan["case_id"])
+                # Existence check only (raises if the case is gone) -- the
+                # returned Case is intentionally unused.
+                self._require_case(conn, scan["case_id"])
                 try:
                     started = datetime.fromisoformat(scan["started_at"].replace("Z", "+00:00"))
                     if started.tzinfo is None:

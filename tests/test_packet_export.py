@@ -11,8 +11,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-
 from conftest import counsel_gate_violations
+
 from tens_hq.connectors import (
     ContractFactsRecord,
     FRNoticeRecord,
@@ -23,20 +23,18 @@ from tens_hq.connectors import (
 )
 from tens_hq.eligibility_gate import assess_eligibility
 from tens_hq.opportunity_packet import PACKET_FRAMING, build_opportunity_packet_markdown
-from tens_hq.pl_match import PLMatchResult
-from tens_hq.radar_handoff import RadarHandoff, RadarHandoffClaims
-from tens_hq.staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 from tens_hq.packet_export import (
     MANIFEST_EMPTY_NOTE,
     PACKET_EXPORT_TITLE,
-    SectionEntry,
     SourceEntry,
     assemble_packet_export,
     derive_section_ledger,
     derive_source_manifest,
     packet_export_filename,
 )
-
+from tens_hq.pl_match import PLMatchResult
+from tens_hq.radar_handoff import RadarHandoff, RadarHandoffClaims
+from tens_hq.staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 
 # --- Fixtures ------------------------------------------------------------
 

@@ -69,9 +69,9 @@ order or the real clock.
 
 from __future__ import annotations
 
+import itertools
 from dataclasses import dataclass
 from enum import Enum
-import itertools
 from typing import Sequence
 
 from .connectors import ContractFactsRecord, SubawardRecord, SubawardsResult

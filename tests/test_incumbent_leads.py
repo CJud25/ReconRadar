@@ -92,7 +92,7 @@ def test_competed_code_is_observed_no_interpretation_lead() -> None:
 def test_not_competed_family_without_low_offers_is_lead_single() -> None:
     cf = _cf(extent_competed_code="B", number_of_offers_received=5)
     assessment = derive_incumbent_leads(cf)
-    single = [l for l in assessment.leads if l.band is LeadBand.LEAD_SINGLE]
+    single = [lead for lead in assessment.leads if lead.band is LeadBand.LEAD_SINGLE]
     assert len(single) == 1
     assert "sole-source family" in single[0].text
     assert "code" in single[0].basis
@@ -101,7 +101,7 @@ def test_not_competed_family_without_low_offers_is_lead_single() -> None:
 def test_single_offer_on_competed_award_is_lead_single() -> None:
     cf = _cf(extent_competed_code="D", number_of_offers_received=1)
     assessment = derive_incumbent_leads(cf)
-    single = [l for l in assessment.leads if l.band is LeadBand.LEAD_SINGLE]
+    single = [lead for lead in assessment.leads if lead.band is LeadBand.LEAD_SINGLE]
     assert len(single) == 1
     assert "drew a single offer" in single[0].text
 
@@ -123,8 +123,8 @@ def test_sole_source_offers_count_is_entailed_never_corroboration() -> None:
     for offers in (0, 1, -5):
         cf = _cf(extent_competed_code="C", number_of_offers_received=offers)
         assessment = derive_incumbent_leads(cf)
-        assert not [l for l in assessment.leads if l.band is LeadBand.LEAD_CORROBORATED]
-        single = [l for l in assessment.leads if l.band is LeadBand.LEAD_SINGLE]
+        assert not [lead for lead in assessment.leads if lead.band is LeadBand.LEAD_CORROBORATED]
+        single = [lead for lead in assessment.leads if lead.band is LeadBand.LEAD_SINGLE]
         assert len(single) == 1
         assert "consistent with, not independent of" in single[0].text
         # The interpretation's basis remains the code alone.
@@ -136,8 +136,8 @@ def test_sole_source_without_offers_reported_omits_the_entailment_note() -> None
     # fires on the code alone and does not mention an offers count.
     cf = _cf(extent_competed_code="G", number_of_offers_received=None)
     assessment = derive_incumbent_leads(cf)
-    assert not [l for l in assessment.leads if l.band is LeadBand.LEAD_CORROBORATED]
-    single = [l for l in assessment.leads if l.band is LeadBand.LEAD_SINGLE]
+    assert not [lead for lead in assessment.leads if lead.band is LeadBand.LEAD_CORROBORATED]
+    single = [lead for lead in assessment.leads if lead.band is LeadBand.LEAD_SINGLE]
     assert len(single) == 1
     assert "consistent with" not in single[0].text
 
@@ -147,7 +147,7 @@ def test_unrecognized_extent_code_is_no_guess() -> None:
     assessment = derive_incumbent_leads(cf)
     rendered = _render(assessment, cf)
     assert "competition posture not classified here" in rendered
-    assert not [l for l in assessment.leads if l.band in (LeadBand.LEAD_SINGLE, LeadBand.LEAD_CORROBORATED)]
+    assert not [lead for lead in assessment.leads if lead.band in (LeadBand.LEAD_SINGLE, LeadBand.LEAD_CORROBORATED)]
 
 
 def test_extent_code_not_reported_renders_honestly() -> None:
@@ -221,7 +221,7 @@ def test_subawards_render_caps_at_ten_and_says_more_exist() -> None:
     sub = _sub(*records)
     assessment = derive_incumbent_leads(cf, subawards=sub)
     rendered = _render(assessment, cf)
-    subawardee_leads = [l for l in assessment.leads if l.text.startswith('Subawardee "Sub')]
+    subawardee_leads = [lead for lead in assessment.leads if lead.text.startswith('Subawardee "Sub')]
     assert len(subawardee_leads) == 10
     assert "showing the top 10 by reported amount, 5 more not shown here" in rendered
 
@@ -244,8 +244,8 @@ def test_deterministic_subaward_ordering_amount_desc_none_last_tiebreak() -> Non
     )
     sub = _sub(*records)
     assessment = derive_incumbent_leads(cf, subawards=sub)
-    subawardee_leads = [l for l in assessment.leads if l.text.startswith("Subawardee")]
-    names_in_order = [l.text.split('"')[1] for l in subawardee_leads]
+    subawardee_leads = [lead for lead in assessment.leads if lead.text.startswith("Subawardee")]
+    names_in_order = [lead.text.split('"')[1] for lead in subawardee_leads]
     assert names_in_order == ["Charlie Co", "Alpha Co", "Zeta Co", "Beta Co"]
 
     # Re-deriving must produce byte-identical order (no dict/set nondeterminism).
@@ -262,7 +262,7 @@ def test_directory_exact_match_is_coincident_with_analyst_confirm_text() -> None
     assessment = derive_incumbent_leads(
         cf, subawards=sub, directory_agency_names=["ExampleWorks Sub LLC"]
     )
-    coincident = [l for l in assessment.leads if l.band is LeadBand.COINCIDENT]
+    coincident = [lead for lead in assessment.leads if lead.band is LeadBand.COINCIDENT]
     assert len(coincident) == 1
     assert assessment.directory_match_count == 1
     text = coincident[0].text

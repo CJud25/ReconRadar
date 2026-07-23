@@ -39,9 +39,9 @@ first real run (see the repository handoff/caveats), consistent with ADR-011.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-import json
 from pathlib import Path
 from typing import Any, Callable
 

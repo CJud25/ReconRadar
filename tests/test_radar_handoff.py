@@ -19,7 +19,6 @@ from tens_hq.radar_handoff import (
     MAX_STRING_FIELD_CHARS,
     MAX_UPLOAD_BYTES,
     RADAR_HANDOFF_SCHEMA_VERSION,
-    RadarHandoff,
     RadarHandoffClaims,
     RadarHandoffError,
     RadarHandoffPlace,

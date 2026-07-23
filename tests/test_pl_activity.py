@@ -71,9 +71,9 @@ def test_no_pull_absence_basis_is_the_pinned_string() -> None:
 
 def test_caveats_precede_any_notice() -> None:
     lines = pl_activity_lines(_result(records=(_notice(),), count_total=1))
-    framing_idx = next(i for i, l in enumerate(lines) if "never interpreted" in l)
-    stream_idx = next(i for i, l in enumerate(lines) if "FULL notice stream" in l)
-    notice_idx = next(i for i, l in enumerate(lines) if "Procurement List; Proposed Deletions" in l)
+    framing_idx = next(i for i, line in enumerate(lines) if "never interpreted" in line)
+    stream_idx = next(i for i, line in enumerate(lines) if "FULL notice stream" in line)
+    notice_idx = next(i for i, line in enumerate(lines) if "Procurement List; Proposed Deletions" in line)
     assert framing_idx < notice_idx
     assert stream_idx < notice_idx
 

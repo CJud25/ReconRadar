@@ -8,10 +8,10 @@ an employee directory.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import re
+from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-import re
 from typing import Any, Mapping
 
 from .locations import Location, normalize_location

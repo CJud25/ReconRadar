@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from tens_hq import roles
 
-
 PACKET_PAGES = ("BD Feasibility", "Privacy & Governance")
 
 

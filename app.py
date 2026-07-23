@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 from pathlib import Path
-import sys
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-import streamlit as st
+import streamlit as st  # noqa: E402 -- sys.path must be set (above) first
 
-from tens_hq.constants import APP_VERSION, DEFAULT_SEED, DEFAULT_TARGET, SYNTHETIC_BANNER
-from tens_hq.demo_tour import DEMO_TOUR
-from tens_hq.pages import PAGE_RENDERERS, apply_theme
-from tens_hq.roles import allowed_pages, pilot_mode_enabled
-from tens_hq.synthetic import generate_demo_data
+from tens_hq.constants import (  # noqa: E402
+    APP_VERSION,
+    DEFAULT_SEED,
+    DEFAULT_TARGET,
+    SYNTHETIC_BANNER,
+)
+from tens_hq.demo_tour import DEMO_TOUR  # noqa: E402
+from tens_hq.pages import PAGE_RENDERERS, apply_theme  # noqa: E402
+from tens_hq.roles import allowed_pages, pilot_mode_enabled  # noqa: E402
+from tens_hq.synthetic import generate_demo_data  # noqa: E402
 
 st.set_page_config(
     page_title="ReconRadar",

@@ -8,10 +8,10 @@ fetches a URL or joins public directory rows to synthetic people/outcomes.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from hashlib import sha256
 import logging
 import os
+from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -21,14 +21,14 @@ import streamlit as st
 from .case_store import CaseRepository
 from .cases import ROLE_ALIASES, TEAM_ALIASES
 from .connectors import (
+    DEFAULT_ACS_YEAR,
+    SYNTHETIC_EXAMPLE_PIID,
+    WORKBOOK_SOURCE_KINDS,
     AbilityOneServicesConnector,
     ConnectorError,
     ContractFactsRecord,
-    DEFAULT_ACS_YEAR,
     NIBNPAConnector,
-    SYNTHETIC_EXAMPLE_PIID,
     SourceKind,
-    WORKBOOK_SOURCE_KINDS,
     load_synthetic_example_facts,
     pull_contract_facts,
     pull_geography_context,

@@ -23,15 +23,15 @@ first real run (see the repository handoff/caveats).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from datetime import datetime
 import json
 import os
+from dataclasses import dataclass, replace
+from datetime import datetime
 from typing import Any, Callable
 from urllib.parse import quote
 
 from .api import RetrievedPayload, http_get
-from .base import ConnectorError, SourceKind, utc_now
+from .base import ConnectorError, utc_now
 
 # The public ACS API base.  ACS 5-year detailed tables live under ``acs/acs5``;
 # subject tables (S-prefixed, e.g. S1810) live under ``acs/acs5/subject``.

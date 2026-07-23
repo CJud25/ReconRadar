@@ -9,7 +9,7 @@ from streamlit.testing.v1 import AppTest
 
 from tens_hq import bd_page as bd_page_module
 from tens_hq.case_store import CaseRepository
-from tens_hq.connectors import AwardCandidate, ContractFactsRecord, ContractFactsResolution
+from tens_hq.connectors import AwardCandidate, ContractFactsRecord, ContractFactsResolution, GeographyRecord
 
 # The deterministic synthetic generator is CPU-heavy on this stack (tens of
 # seconds on Python 3.14 + pandas 3.0). app.py wraps it in load_demo_data via
@@ -814,3 +814,59 @@ def test_scan_tab_offline_nib_npa_sample_checkbox_is_wired() -> None:
     checkbox = next(box for box in app.checkbox if box.key == "scan_use_sample_nib_npa")
     assert checkbox.label == "Use the bundled SYNTHETIC NIB/NPA example instead of an upload"
     assert checkbox.value is False
+
+
+def test_acs_year_change_detaches_stale_geography(monkeypatch) -> None:
+    # §8 confirmed bug / §12.4 partial: README.md's "editing an input detaches
+    # any stale result built on it" invariant did not hold for the ACS vintage
+    # year -- the reuse guard matched on county+state only. Pull at 2022, then
+    # change the year to 2019 without re-pulling; the packet must fall back to
+    # the honest "Not yet retrieved" placeholder rather than keep showing the
+    # stale 2022 figure. Offline (no socket): pull_geography_context is
+    # monkeypatched, so the autouse socket guard would fail this test if the
+    # code path ever fell through to a real network call.
+    def fake_pull(county: str, state: str, *, year: int, **_kwargs: object) -> GeographyRecord:
+        return GeographyRecord(
+            county_name=f"{county.title()} County",
+            state_code=state,
+            state_fips="08",
+            county_fips="031",
+            total_population=100000,
+            with_disability=12000,
+            disability_percent=12.0,
+            acs_survey="ACS 5-Year",
+            acs_vintage_year=year,
+            source_url=f"https://api.census.gov/data/{year}/acs/acs5",
+            retrieved_at="2026-07-23T00:00:00Z",
+        )
+
+    monkeypatch.setattr("tens_hq.bd_page.pull_geography_context", fake_pull)
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    def _ti(key):
+        return next(widget for widget in app.text_input if widget.key == key)
+
+    def _ni(key):
+        return next(widget for widget in app.number_input if widget.key == key)
+
+    _ti("op_packet_county").set_value("Denver")
+    _ti("op_packet_state").set_value("CO")
+    _ni("op_packet_year").set_value(2022)
+    app.run()
+    next(button for button in app.button if button.key == "op_packet_pull").click().run()
+    assert not app.exception
+
+    packet = "\n".join(block.value for block in app.markdown)
+    assert "vintage 2022" in packet
+
+    _ni("op_packet_year").set_value(2019)
+    app.run()
+    assert not app.exception
+
+    packet = "\n".join(block.value for block in app.markdown)
+    assert "vintage 2022" not in packet
+    assert "Not yet retrieved." in packet

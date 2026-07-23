@@ -1067,6 +1067,7 @@ def _render_opportunity_packet() -> None:
                 st.session_state["op_packet_result"] = {
                     "county": county.strip().casefold(),
                     "state": state.strip().upper(),
+                    "year": year,
                     "geography": record,
                 }
                 st.success("Attached ACS geography context.")
@@ -1085,6 +1086,7 @@ def _render_opportunity_packet() -> None:
         stored is not None
         and stored.get("county") == county.strip().casefold()
         and stored.get("state") == state.strip().upper()
+        and stored.get("year") == year
     ):
         geography = stored.get("geography")
 

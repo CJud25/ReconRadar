@@ -1271,7 +1271,7 @@ def render_public_bd_page(data: Any, target: float, scenario: str) -> None:
 
     del data, target, scenario
     st.markdown('<div class="page-kicker">Business Development / Public Evidence</div>', unsafe_allow_html=True)
-    st.markdown('<h1 class="page-title">BD Feasibility Scanner & Tracker</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="page-title">Opportunity Packet & Public-Evidence Tracker</h1>', unsafe_allow_html=True)
     st.markdown('<div class="page-subtitle">Turn an approved location into a repeatable evidence case: import, reconcile, review, resolve the route, and validate.</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="planning-banner">{_PUBLIC_BANNER}</div>', unsafe_allow_html=True)
     st.warning("Public directory evidence is discovery evidence only. The scanner never infers capacity, candidate supply, a relationship, or an acquisition outcome.")

@@ -160,9 +160,8 @@ to explicit human review.
   packet's copy. Guard tests lock the whole rendered packet, the full export,
   the guided-tour copy, and every packet module's source text against that
   vocabulary. Do not ad-lib it into the demo.
-- **If asked why a no-score product lives on a page named "BD Feasibility Scanner
-  & Tracker":** the name is legacy; the page records evidence readiness and case
-  state, never a feasibility score. Answer it head-on — the question is the thesis.
+- **If asked why the page is titled the way it is:** the page is titled to match
+  the thesis — it records cited evidence and case state, never a feasibility score.
 
 ## What we can do next
 

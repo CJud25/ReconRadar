@@ -45,6 +45,19 @@ $env:TENS_HQ_CENSUS_API_KEY = "<your key>"
 .\run_demo.ps1
 ```
 
+**Docker, with a persistent ledger.** `Dockerfile` declares
+`/app/data/runtime` (where the case ledger lives) as a volume mount point, but
+a container recreated with no volume attached loses the ledger silently. Mount
+a named volume so a redeploy does not wipe cases:
+
+```bash
+docker build --tag reconradar:ci .
+docker run -p 8501:8501 \
+  -e TENS_HQ_PILOT_MODE=1 -e TENS_HQ_CENSUS_API_KEY=<your key> \
+  -v reconradar_runtime:/app/data/runtime \
+  reconradar:ci
+```
+
 ## Per-opportunity workflow
 
 Work the **Opportunity Packet** tab top to bottom; the packet re-renders as

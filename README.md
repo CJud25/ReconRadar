@@ -50,11 +50,27 @@ on it. A missing value reads "Not reported" — never $0.00.
 .\run_demo.ps1          # provisions a venv and launches the app
 ```
 
-or manually: `pip install -r requirements.txt` then `streamlit run app.py`
-(Python 3.11+). The packet works fully offline on the bundled SYNTHETIC examples;
-the four live pulls (USAspending ×2, Census ACS, Federal Register) need internet,
-and the ACS pull needs a free Census API key in `TENS_HQ_CENSUS_API_KEY` (the key
-rides only the wire request — cited URLs stay keyless by construction).
+A default Windows 11 execution policy blocks that script (`.ps1 files are
+disabled on this system`). Either run it as:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run_demo.ps1
+```
+
+or install manually — this also works on any OS: `pip install -r requirements.txt`
+then `streamlit run app.py` (Python 3.11+). The packet works fully offline on the
+bundled SYNTHETIC examples; the four live pulls (USAspending ×2, Census ACS,
+Federal Register) need internet, and the ACS pull needs a free Census API key in
+`TENS_HQ_CENSUS_API_KEY` (the key rides only the wire request — cited URLs stay
+keyless by construction).
+
+**Hosting note.** The case ledger (`data/runtime/tens_hq.sqlite3`) is local,
+single-user, and unauthenticated — it is not an identity, access-control, or
+multi-tenant boundary. A shared hosted URL running this app would commingle every
+visitor's cases and let one visitor read or mutate another's. Run the full app
+locally (or per pilot analyst), or host only the packet-only surface, until
+per-identity isolation and auth land (see `docs/ARCHITECTURE.md` §"Trust and
+storage boundaries").
 
 - `docs/DEMO_SCRIPT.md` — a guided walkthrough (the in-app "▶ Guided demo"
   follows it).

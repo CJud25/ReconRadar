@@ -54,6 +54,7 @@ from .staffing_whatif import StaffingWhatIfResult
 
 _ASSURANCE_API_RETRIEVED = "API_RETRIEVED"
 _ASSURANCE_USER_ATTESTED = "USER_ATTESTED"
+_ASSURANCE_SYNTHETIC_EXAMPLE = "SYNTHETIC_EXAMPLE"
 
 # Used for both a missing retrieval timestamp and a missing reference -- the
 # exact wording the SourceEntry.retrieved_at field promises (see the
@@ -81,7 +82,9 @@ class SourceEntry:
     literal ``"Not supplied (analyst attestation absent)"`` when no
     attestation time is available (e.g. an uploaded directory workbook, which
     carries no retrieval timestamp at all). ``assurance`` is always one of
-    ``API_RETRIEVED`` or ``USER_ATTESTED``.
+    ``API_RETRIEVED``, ``USER_ATTESTED``, or ``SYNTHETIC_EXAMPLE`` (ADR-025:
+    the bundled offline synthetic-example contract-facts row only -- never a
+    real record, never claimed as a live retrieval).
     """
 
     source: str  # e.g. "Contract Facts (live, USAspending award detail)"
@@ -164,6 +167,16 @@ def _gate_row(eligibility: object | None, contract_facts: ContractFactsRecord | 
 
 
 def _contract_facts_live_row(contract_facts: ContractFactsRecord | None) -> SectionEntry:
+    if contract_facts is not None and contract_facts.synthetic_example:
+        # ADR-025: the bundled offline SYNTHETIC-example record must not claim
+        # a live pull in the ledger either -- worded with no "live" token so
+        # the honesty test can be a clean substring ban.
+        return SectionEntry(
+            "Contract Facts (SYNTHETIC example)",
+            True,
+            "Bundled SYNTHETIC example facts attached — offline, not a real "
+            "USAspending API retrieval.",
+        )
     if contract_facts is not None:
         return SectionEntry(
             "Contract Facts (live)",
@@ -422,7 +435,19 @@ def derive_source_manifest(
             )
         )
 
-    if contract_facts is not None:
+    if contract_facts is not None and contract_facts.synthetic_example:
+        # ADR-025: never API_RETRIEVED, never a live award URL -- reference is
+        # the same honest, non-URL provenance marker the packet body cites.
+        entries.append(
+            SourceEntry(
+                source="Contract Facts (SYNTHETIC example, offline)",
+                reference=contract_facts.source_url,
+                retrieved_at=contract_facts.retrieved_at,
+                assurance=_ASSURANCE_SYNTHETIC_EXAMPLE,
+                notes="SYNTHETIC example — not real USAspending data.",
+            )
+        )
+    elif contract_facts is not None:
         entries.append(
             SourceEntry(
                 source="Contract Facts (live, USAspending award detail)",

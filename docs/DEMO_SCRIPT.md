@@ -47,7 +47,12 @@ each beat — the demo's credibility rests on never overclaiming what a section 
    pick the exact award — it never auto-picks. Obligated dollars and the ceiling
    stay distinct; a missing amount reads "not reported," never $0.00. The pull
    also cites the award's reported description and place of performance and
-   prefills empty place inputs.
+   prefills empty place inputs. **Offline note (ADR-025):** the bundled
+   SYNTHETIC PIID (`SYNTH-A2-0001`, prefilled by the handoff above) resolves
+   from a committed, invented sample instead of a network call — the section
+   still populates fully, labeled "SYNTHETIC example — offline, not a live
+   retrieval" throughout, never `Assurance API_RETRIEVED`. A real PIID still
+   needs a network connection.
 3. **Eligibility gate.** Scroll the rendered packet: the gate sits above all other
    evidence and now reads from the live set-aside code, superseding the analyst
    field.
@@ -140,8 +145,13 @@ to explicit human review.
   `TENS_HQ_CENSUS_API_KEY` environment variable before launching, or the pull
   fails loud with sign-up instructions. The key rides only the wire request —
   cited source URLs stay keyless by construction (test-locked). Everything else is offline; for a no-network
-  demo, skip them and run on the bundled SYNTHETIC examples. The packet stays
-  honest about what's missing — the gate reads Unknown, Geography shows its
+  demo, skip them and run on the bundled SYNTHETIC examples. **The Contract
+  Facts pull is the one exception (ADR-025): the bundled SYNTHETIC PIID
+  `SYNTH-A2-0001` now resolves from a committed offline sample instead of a
+  network call, so that section (and the Eligibility Gate and Capture Window
+  it feeds) populates fully offline, clearly labeled SYNTHETIC throughout —
+  never `Assurance API_RETRIEVED`. Every other PIID still needs a network.**
+  The packet stays honest about what's missing — the gate reads Unknown, Geography shows its
   placeholder, and the R2a map states per criterion what is absent; sections whose
   evidence was never attached are omitted from the body and listed as not included,
   with the reason, in the export's Section ledger.

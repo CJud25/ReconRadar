@@ -203,8 +203,23 @@ def live_contract_facts_lines(record: ContractFactsRecord) -> list[str]:
             "R2b worksite key. A base-named city can sit in a county whose name never "
             "appears on the award.",
         ]
+    # ADR-025: the bundled offline SYNTHETIC-example record must never render
+    # under the live heading/provenance -- both are switched together so the
+    # body can never half-claim a live retrieval.
+    if record.synthetic_example:
+        heading = "## Contract Facts (SYNTHETIC example — offline, not a live retrieval)"
+        provenance_line = (
+            "- Provenance: bundled SYNTHETIC example, offline — NOT a live "
+            "retrieval and does not carry an API_RETRIEVED assurance label."
+        )
+    else:
+        heading = "## Contract Facts (live — USAspending, cited)"
+        provenance_line = (
+            "- Provenance: LIVE USAspending API retrieval (Assurance API_RETRIEVED). "
+            "Distinct from the analyst-entered identifiers below."
+        )
     lines = [
-        "## Contract Facts (live — USAspending, cited)",
+        heading,
         "",
         f"- PIID: {_reported(record.piid)}",
         f"- Award type: {award_type}",
@@ -231,8 +246,7 @@ def live_contract_facts_lines(record: ContractFactsRecord) -> list[str]:
         "",
         f"- Source: {_md(record.source_url)}",
         f"- Retrieved at: {_md(record.retrieved_at)}",
-        "- Provenance: LIVE USAspending API retrieval (Assurance API_RETRIEVED). "
-        "Distinct from the analyst-entered identifiers below.",
+        provenance_line,
     ]
     return lines
 

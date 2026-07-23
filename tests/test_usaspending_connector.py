@@ -19,6 +19,8 @@ from tens_hq.connectors import SourceKind, WORKBOOK_SOURCE_KINDS
 from tens_hq.connectors.api import http_post
 from tens_hq.connectors.base import ConnectorError
 from tens_hq.connectors.usaspending import (
+    SYNTHETIC_EXAMPLE_PIID,
+    load_synthetic_example_facts,
     parse_award_candidates,
     parse_contract_facts,
     parse_subawards,
@@ -455,3 +457,32 @@ def test_pull_subawards_no_opener_hits_socket_guard() -> None:
 
 def test_usaspending_subaward_excluded_from_workbook_kinds() -> None:
     assert SourceKind.USASPENDING_SUBAWARD not in WORKBOOK_SOURCE_KINDS
+
+
+# --- Offline SYNTHETIC-example facts (ADR-025) ----------------------------
+
+
+def test_load_synthetic_example_facts_is_resolved_and_honestly_labeled() -> None:
+    # No opener/clock involved -- this reads a bundled file, never a socket
+    # (the autouse socket guard would fail this test if it tried).
+    resolution = load_synthetic_example_facts()
+    assert resolution.resolved
+    assert resolution.piid == SYNTHETIC_EXAMPLE_PIID
+    record = resolution.record
+    assert record.synthetic_example is True
+    assert record.piid == SYNTHETIC_EXAMPLE_PIID
+    # Obligated must stay distinct from the ceiling, same discipline as a
+    # real record (never coerced/collapsed to a single figure).
+    assert record.total_obligation != record.base_and_all_options
+    assert record.total_obligation is not None
+    assert record.base_and_all_options is not None
+    # Never a live USAspending URL -- the honesty guarantee this whole ADR
+    # exists to keep.
+    assert "usaspending.gov" not in record.source_url
+    assert "api.usaspending" not in record.source_url
+
+
+def test_load_synthetic_example_facts_never_claims_live_via_to_public_payload() -> None:
+    payload = load_synthetic_example_facts().record.to_public_payload()
+    assert payload["synthetic_example"] is True
+    assert "usaspending.gov" not in str(payload["source_url"])

@@ -25,7 +25,9 @@ from .connectors import (
     ContractFactsRecord,
     DEFAULT_ACS_YEAR,
     NIBNPAConnector,
+    SYNTHETIC_EXAMPLE_PIID,
     WORKBOOK_SOURCE_KINDS,
+    load_synthetic_example_facts,
     pull_contract_facts,
     pull_geography_context,
     pull_pl_notices,
@@ -706,7 +708,13 @@ def _render_opportunity_packet() -> None:
             st.warning("Enter a contract PIID before pulling live facts.")
         else:
             try:
-                resolution = pull_contract_facts(piid.strip())
+                # ADR-025: the bundled synthetic PIID resolves offline, from the
+                # committed sample -- no network call. Every other PIID is the
+                # unchanged live path.
+                if piid.strip() == SYNTHETIC_EXAMPLE_PIID:
+                    resolution = load_synthetic_example_facts()
+                else:
+                    resolution = pull_contract_facts(piid.strip())
                 st.session_state["op_packet_facts_result"] = {
                     "piid": piid.strip(),
                     "resolution": resolution,
@@ -716,7 +724,13 @@ def _render_opportunity_packet() -> None:
                         resolution.record is not None
                         and _prefill_award_place_inputs(resolution.record)
                     )
-                    success_message = "Attached live USAspending contract facts."
+                    if resolution.record is not None and resolution.record.synthetic_example:
+                        success_message = (
+                            "Loaded the bundled SYNTHETIC example contract facts "
+                            "(offline) — not a live retrieval."
+                        )
+                    else:
+                        success_message = "Attached live USAspending contract facts."
                     if prefilled:
                         success_message += _AWARD_PLACE_PREFILL_SUFFIX
                     st.success(success_message)

@@ -608,6 +608,47 @@ def test_opportunity_packet_radar_handoff_drops_out_on_piid_retarget():
     assert "## Origin — Radar handoff (context, not evidence)" not in packet_after
 
 
+def test_opportunity_packet_offline_synthetic_example_facts_populate_the_flagship_moment():
+    # ADR-025 / §15-#3: following the guided demo offline (handoff sample ->
+    # Pull contract facts (live)) must reach a populated, clearly-SYNTHETIC
+    # Contract Facts + Eligibility Gate + Capture Window render with no red
+    # error, using only the bundled synthetic PIID -- no socket opened (the
+    # socket guard would fail this test if the offline branch fell through
+    # to a real network call).
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    def _ti(key):
+        return next(widget for widget in app.text_input if widget.key == key)
+
+    next(box for box in app.checkbox if box.key == "op_packet_handoff_use_sample").set_value(True)
+    app.run()
+    next(button for button in app.button if button.key == "op_packet_handoff_use").click().run()
+    assert not app.exception
+    assert _ti("op_packet_piid").value == "SYNTH-A2-0001"
+
+    next(button for button in app.button if button.key == "op_packet_facts_pull").click().run()
+    assert not app.exception
+
+    assert any(
+        "Loaded the bundled SYNTHETIC example contract facts" in getattr(msg, "value", "")
+        for msg in app.success
+    )
+
+    packet = "\n".join(block.value for block in app.markdown)
+    assert "## Contract Facts (SYNTHETIC example — offline, not a live retrieval)" in packet
+    assert "## Contract Facts (live — USAspending, cited)" not in packet
+    # Obligated and ceiling both appear, as distinct lines/values.
+    assert "$180,000.00" in packet
+    assert "$420,000.00" in packet
+    # The gate and capture window both render off the attached synthetic facts.
+    assert "## Eligibility gate (can the NPA prime?)" in packet
+    assert "## Capture window (estimated solicitation + R2a start-by band)" in packet
+
+
 def test_opportunity_packet_staffing_whatif_absent_without_baseline():
     # A6: the section stays absent until a baseline value is entered -- the
     # packet stays usable without it.

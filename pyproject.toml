@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["openpyxl==3.1.5", "pytest==8.4.1", "ruff==0.15.22"]
+dev = ["openpyxl==3.1.5", "pip-audit==2.10.1", "pytest==8.4.1", "ruff==0.15.22"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

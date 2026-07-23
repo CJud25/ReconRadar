@@ -1184,6 +1184,51 @@ def test_hostile_manifest_reference_is_two_layer_escaped_in_table_cell() -> None
     assert "\\)/EXTRA" in export_doc
 
 
+def test_manifest_bracketed_source_url_is_autolinked_not_backslash_escaped() -> None:
+    # §5.8: a cited source_url (FR here, but this is the one render point
+    # shared by contract facts/ACS/subawards too) legitimately carries "[]"
+    # in query params. It must paste-and-resolve cleanly from the downloaded
+    # export -- no visible backslash escapes -- while a non-URL reference
+    # (e.g. an uploaded filename) still routes through the escaped `_cell`.
+    bracketed_url = (
+        "https://www.federalregister.gov/api/v1/documents.json"
+        "?conditions[type][]=NOTICE&per_page=20"
+    )
+    manifest = (
+        SourceEntry(
+            source="Procurement List activity (live, Federal Register)",
+            reference=bracketed_url,
+            retrieved_at="2026-07-21T18:00:00+00:00",
+            assurance="API_RETRIEVED",
+            notes="",
+        ),
+        SourceEntry(
+            source="AbilityOne NPA directory (analyst upload)",
+            reference="npa_directory[2026].xlsx",
+            retrieved_at="Not supplied (analyst attestation absent)",
+            assurance="USER_ATTESTED",
+            notes="",
+        ),
+    )
+    export_doc = assemble_packet_export(
+        body_markdown="body\n",
+        piid="X",
+        county="Denver",
+        state="CO",
+        ledger=(),
+        manifest=manifest,
+        as_of=_AS_OF,
+    )
+    # The URL's own brackets are never backslash-escaped, and it pastes
+    # verbatim inside a CommonMark autolink.
+    assert "conditions\\[type\\]\\[\\]" not in export_doc
+    assert "conditions[type][]=NOTICE" in export_doc
+    assert f"<{bracketed_url}>" in export_doc
+    # The non-URL filename reference is unaffected -- still escaped, not autolinked.
+    assert "npa_directory\\[2026\\].xlsx" in export_doc
+    assert "<npa_directory" not in export_doc
+
+
 def test_hostile_piid_and_county_are_escaped_in_header() -> None:
     export_doc = assemble_packet_export(
         body_markdown="body\n",

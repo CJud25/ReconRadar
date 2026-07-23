@@ -609,6 +609,32 @@ def _cell(value: object) -> str:
     return _md(value).replace("|", "/")
 
 
+# A URL-safe sibling of ``_md``/``_cell`` (§5.8 fix): cited source URLs (FR,
+# USAspending, ACS, subawards) legitimately contain "[]" in query params
+# (e.g. FR's conditions[type][]=NOTICE), so the blanket escape above renders
+# visible "\[" / "\]" that corrupt paste-and-resolve in the downloadable
+# export. A clean absolute http(s) value with no whitespace/angle-brackets/
+# pipe renders as a CommonMark autolink (``<https://...>``), which preserves
+# "[]()" literally and cannot itself carry a table- or markdown-injection
+# (autolinks cannot contain whitespace, angle brackets, or "|"). Anything
+# else -- a hostile or non-URL reference such as an uploaded filename or
+# "HOURS mode entry" -- still falls back to the same two-layer ``_cell``
+# escaping as before.
+def _md_url(value: object) -> str:
+    if value is None:
+        return ""
+    flat = " ".join(str(value).splitlines())
+    if flat.startswith(("http://", "https://")) and not any(
+        ch in flat for ch in (" ", "\t", "<", ">", "|")
+    ):
+        return f"<{flat}>"
+    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
+
+
+def _cell_url(value: object) -> str:
+    return _md_url(value).replace("|", "/")
+
+
 # --- Rendering ---------------------------------------------------------------
 
 PACKET_EXPORT_TITLE = "# Opportunity Packet — cited export"
@@ -660,7 +686,7 @@ def _source_manifest_lines(manifest: Sequence[SourceEntry]) -> list[str]:
         ]
     )
     lines.extend(
-        f"| {_cell(entry.source)} | {_cell(entry.reference)} | {_cell(entry.retrieved_at)} | "
+        f"| {_cell(entry.source)} | {_cell_url(entry.reference)} | {_cell(entry.retrieved_at)} | "
         f"{_cell(entry.assurance)} | {_cell(entry.notes)} |"
         for entry in manifest
     )

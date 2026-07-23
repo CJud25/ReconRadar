@@ -28,13 +28,14 @@ def _result(
     count_total: int = 0,
     truncated: bool = False,
     search_term: str | None = None,
+    source_url: str = _SOURCE_URL,
 ) -> PLNoticesResult:
     return PLNoticesResult(
         records=records,
         count_total=count_total,
         truncated=truncated,
         search_term=search_term,
-        source_url=_SOURCE_URL,
+        source_url=source_url,
         retrieved_at=_RETRIEVED_AT,
     )
 
@@ -222,6 +223,23 @@ def test_hostile_search_term_is_escaped_in_caveat() -> None:
     result = _result(search_term=hostile)
     lines = "\n".join(pl_activity_lines(result))
     assert "](http://evil)" not in lines
+
+
+def test_source_url_with_brackets_is_autolinked_not_backslash_escaped() -> None:
+    # §5.8: FR API URLs legitimately carry "[]" in query params. The cited
+    # Source line must paste-and-resolve cleanly -- no visible backslash
+    # escapes -- so it renders as a CommonMark autolink instead of the
+    # blanket bracket-escape.
+    bracketed = (
+        "https://www.federalregister.gov/api/v1/documents.json"
+        "?conditions[type][]=NOTICE&per_page=20"
+    )
+    result = _result(source_url=bracketed)
+    lines = "\n".join(pl_activity_lines(result))
+    assert "\\[" not in lines
+    assert "\\]" not in lines
+    assert "conditions[type][]=NOTICE" in lines
+    assert f"<{bracketed}>" in lines
 
 
 # --- No score / no directive vocabulary --------------------------------------

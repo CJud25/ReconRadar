@@ -41,7 +41,7 @@ def apply_theme() -> None:
             padding:.8rem .9rem; border-radius:.6rem; min-height:112px; }
         div[data-testid="stMetricLabel"] { color:#52606D; }
         div[data-testid="stDataFrame"] { border:1px solid #D9E2EC; border-radius:.5rem; }
-        .small-note { color:#627D98; font-size:.82rem; }
+        .small-note { color:#52606D; font-size:.82rem; }
         h2, h3 { color:#15324B; }
         </style>
         """,

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from hashlib import sha256
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,12 @@ from .pl_match import find_pl_service_matches
 from .radar_handoff import RadarHandoffError, parse_radar_handoff
 from .scanner import ScanStatus, WorkbookScanner
 from .staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
+
+# Packet-path `except Exception:` handlers log here before showing a public
+# message (never the URL, key, or PII -- a short static context string only).
+# This restores a server-side diagnostic trail for an unexpected internal
+# error without changing what the operator sees beyond the message itself.
+logger = logging.getLogger(__name__)
 
 
 def _sample_pl_services_bytes() -> bytes:
@@ -699,6 +706,7 @@ def _render_opportunity_packet() -> None:
                 st.session_state.pop("op_packet_handoff", None)
                 st.error(f"Could not read the handoff: {exc.public_message}")
             except Exception:
+                logger.exception("radar-handoff parsing failed unexpectedly")
                 st.session_state.pop("op_packet_handoff", None)
                 st.error(
                     "Could not read the handoff. Confirm it is a valid "
@@ -779,9 +787,11 @@ def _render_opportunity_packet() -> None:
                         "walkthrough, or a real PIID with a network connection."
                     )
             except Exception:
+                logger.exception("contract-facts pull failed unexpectedly")
                 st.session_state.pop("op_packet_facts_result", None)
                 st.error(
-                    "Could not retrieve contract facts. The public source may be unavailable."
+                    "An unexpected internal error occurred while retrieving "
+                    "contract facts; it has been logged."
                 )
 
     facts_stored = st.session_state.get("op_packet_facts_result")
@@ -836,8 +846,10 @@ def _render_opportunity_packet() -> None:
             except ConnectorError as exc:
                 st.error(f"Could not retrieve contract facts: {exc.public_message}")
             except Exception:
+                logger.exception("contract-facts award-selection pull failed unexpectedly")
                 st.error(
-                    "Could not retrieve contract facts. The public source may be unavailable."
+                    "An unexpected internal error occurred while retrieving "
+                    "the selected award's contract facts; it has been logged."
                 )
 
     st.caption(
@@ -864,8 +876,12 @@ def _render_opportunity_packet() -> None:
             st.session_state.pop("op_packet_subawards_result", None)
             st.error(f"Could not retrieve subaward records: {exc.public_message}")
         except Exception:
+            logger.exception("subaward records pull failed unexpectedly")
             st.session_state.pop("op_packet_subawards_result", None)
-            st.error("Could not retrieve subaward records. The public source may be unavailable.")
+            st.error(
+                "An unexpected internal error occurred while retrieving "
+                "subaward records; it has been logged."
+            )
 
     # Reuse a stored subawards pull only when it matches the CURRENTLY resolved
     # award's generated id (mirrors the R2b upload reuse-guard style below): a
@@ -903,6 +919,7 @@ def _render_opportunity_packet() -> None:
         except ConnectorError as exc:
             st.error(f"Could not read the directory workbook: {exc.public_message}")
         except Exception:
+            logger.exception("directory workbook parsing failed unexpectedly")
             st.error("Could not read the directory workbook. Confirm it is an approved .xlsx export.")
 
     st.divider()
@@ -1075,8 +1092,12 @@ def _render_opportunity_packet() -> None:
                 st.session_state.pop("op_packet_result", None)
                 st.error(f"Could not retrieve ACS context: {exc.public_message}")
             except Exception:
+                logger.exception("ACS geography context pull failed unexpectedly")
                 st.session_state.pop("op_packet_result", None)
-                st.error("Could not retrieve ACS context. The public source may be unavailable.")
+                st.error(
+                    "An unexpected internal error occurred while retrieving "
+                    "ACS geography context; it has been logged."
+                )
 
     # Only reuse a stored geography when it matches the current place inputs, so
     # a figure is never shown against the wrong county.
@@ -1173,6 +1194,7 @@ def _render_opportunity_packet() -> None:
                 st.session_state.pop("op_packet_pl_result", None)
                 st.error(f"Could not read the PL workbook: {exc.public_message}")
             except Exception:
+                logger.exception("PL Services workbook parsing failed unexpectedly")
                 st.session_state.pop("op_packet_pl_result", None)
                 st.error("Could not read the PL workbook. Confirm it is an approved .xlsx export.")
 
@@ -1238,10 +1260,11 @@ def _render_opportunity_packet() -> None:
                 f"Could not retrieve Federal Register notices: {exc.public_message}"
             )
         except Exception:
+            logger.exception("Federal Register notices pull failed unexpectedly")
             st.session_state.pop("op_packet_fr_result", None)
             st.error(
-                "Could not retrieve Federal Register notices. The public "
-                "source may be unavailable."
+                "An unexpected internal error occurred while retrieving "
+                "Federal Register notices; it has been logged."
             )
 
     # Reuse a stored pull only when its canonical term matches the CURRENT

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from pathlib import Path
@@ -870,3 +871,38 @@ def test_acs_year_change_detaches_stale_geography(monkeypatch) -> None:
     packet = "\n".join(block.value for block in app.markdown)
     assert "vintage 2022" not in packet
     assert "Not yet retrieved." in packet
+
+
+def test_unexpected_contract_facts_error_is_logged_and_not_blamed_on_the_source(
+    monkeypatch, caplog
+) -> None:
+    # §15-#9 / §5.7: an unexpected internal error (anything other than the
+    # already-handled ConnectorError) must be logged server-side and must
+    # NOT tell the operator "the public source may be unavailable" -- that
+    # phrase mislabels a code bug as a network outage. Offline: the raised
+    # ValueError never reaches the network, so the autouse socket guard is
+    # not exercised either way.
+    def fake_pull(piid: str, **_kwargs: object):
+        raise ValueError("boom")
+
+    monkeypatch.setattr("tens_hq.bd_page.pull_contract_facts", fake_pull)
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    next(widget for widget in app.text_input if widget.key == "op_packet_piid").set_value(
+        "47QRAA24D0012"
+    )
+    app.run()
+    with caplog.at_level(logging.ERROR, logger="tens_hq.bd_page"):
+        next(button for button in app.button if button.key == "op_packet_facts_pull").click().run()
+    assert not app.exception
+
+    error_text = "\n".join(msg.value for msg in app.error)
+    assert "source may be unavailable" not in error_text
+    assert "logged" in error_text.lower()
+    assert any(
+        "contract-facts pull failed unexpectedly" in record.message for record in caplog.records
+    )

@@ -8,9 +8,10 @@ fetches a URL or joins public directory rows to synthetic people/outcomes.
 
 from __future__ import annotations
 
+import logging
+import os
 from datetime import datetime, timezone
 from hashlib import sha256
-import os
 from pathlib import Path
 from typing import Any
 
@@ -20,12 +21,15 @@ import streamlit as st
 from .case_store import CaseRepository
 from .cases import ROLE_ALIASES, TEAM_ALIASES
 from .connectors import (
+    DEFAULT_ACS_YEAR,
+    SYNTHETIC_EXAMPLE_PIID,
+    WORKBOOK_SOURCE_KINDS,
     AbilityOneServicesConnector,
     ConnectorError,
     ContractFactsRecord,
-    DEFAULT_ACS_YEAR,
     NIBNPAConnector,
-    WORKBOOK_SOURCE_KINDS,
+    SourceKind,
+    load_synthetic_example_facts,
     pull_contract_facts,
     pull_geography_context,
     pull_pl_notices,
@@ -44,6 +48,12 @@ from .radar_handoff import RadarHandoffError, parse_radar_handoff
 from .scanner import ScanStatus, WorkbookScanner
 from .staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 
+# Packet-path `except Exception:` handlers log here before showing a public
+# message (never the URL, key, or PII -- a short static context string only).
+# This restores a server-side diagnostic trail for an unexpected internal
+# error without changing what the operator sees beyond the message itself.
+logger = logging.getLogger(__name__)
+
 
 def _sample_pl_services_bytes() -> bytes:
     """Read the bundled SYNTHETIC example PL Services workbook (offline)."""
@@ -56,6 +66,13 @@ def _sample_radar_handoff_bytes() -> bytes:
     """Read the bundled SYNTHETIC example Radar handoff JSON (offline)."""
 
     path = Path(__file__).resolve().parents[2] / "data" / "samples" / "sample_radar_handoff.json"
+    return path.read_bytes()
+
+
+def _sample_nib_npa_bytes() -> bytes:
+    """Read the bundled SYNTHETIC example NIB/NPA directory workbook (offline)."""
+
+    path = Path(__file__).resolve().parents[2] / "data" / "samples" / "sample_nib_npa.xlsx"
     return path.read_bytes()
 
 
@@ -212,25 +229,33 @@ def _cases_frame(repo: CaseRepository, cases: list[Any]) -> pd.DataFrame:
     the per-row freshness recompute is intended, not an N+1 concern.
     """
 
-    return pd.DataFrame(
-        [
-            {
-                "case_id": case.case_id,
-                "title": case.title,
-                "location": f"{case.city}, {case.state_code}" + (f" {case.postal_code}" if case.postal_code else ""),
-                "state": repo.displayed_state(case).value,
-                "team": case.team_alias,
-                "role": case.role_alias,
-                "contract": case.contract_type or "",
-                "service": case.service_type or "",
-                "headcount": case.target_headcount or "",
-                "start": case.target_start_date or "",
-                "job families": ", ".join(case.job_family_requirements),
-                "version": case.version,
-            }
-            for case in cases
-        ]
-    )
+    rows = [
+        {
+            "title": case.title,
+            "location": f"{case.city}, {case.state_code}" + (f" {case.postal_code}" if case.postal_code else ""),
+            "state": repo.displayed_state(case).value,
+            "team": case.team_alias,
+            "role": case.role_alias,
+            "contract": case.contract_type or "",
+            "service": case.service_type or "",
+            "headcount": case.target_headcount or "",
+            "start": case.target_start_date or "",
+            "job families": ", ".join(case.job_family_requirements),
+            "case_id": case.case_id,
+        }
+        for case in cases
+    ]
+    # Optional columns that are empty across the whole current caseload add
+    # visual noise for no information; drop them from the displayed frame
+    # (case_id, the internal id, stays available on every row -- just last
+    # and not the widest, leading column; `version`, an internal optimistic-
+    # concurrency detail, is not user-facing and is dropped entirely).
+    optional_columns = ("contract", "service", "headcount", "start", "job families")
+    for column in optional_columns:
+        if rows and all(not row[column] for row in rows):
+            for row in rows:
+                del row[column]
+    return pd.DataFrame(rows)
 
 
 def _render_cases(repo: CaseRepository) -> None:
@@ -293,22 +318,39 @@ def _render_scan(repo: CaseRepository) -> None:
     with st.form("public_scan_form"):
         source = st.selectbox("Approved source", [kind.value for kind in WORKBOOK_SOURCE_KINDS])
         workbook = st.file_uploader("Official workbook export (.xlsx)", type=["xlsx"])
+        use_sample_nib_npa = st.checkbox(
+            "Use the bundled SYNTHETIC NIB/NPA example instead of an upload",
+            key="scan_use_sample_nib_npa",
+            value=False,
+        )
         idempotency_key = st.text_input("Retry key (optional)", placeholder="capture-2026-07-18-denver-nib")
         actor_role = st.selectbox("Analyst role", ["Analyst", "Reviewer", "Compliance Reviewer"])
         retrieved_at = st.text_input("Source retrieval time (UTC; leave blank if unknown)", placeholder="2026-07-18T14:30:00Z")
         attested = st.checkbox("I attest this is an approved public AbilityOne workbook export", value=False)
         submitted = st.form_submit_button("Run local scan", type="primary")
     if submitted:
-        if workbook is None:
+        if use_sample_nib_npa:
+            scan_source = SourceKind.NIB_NPA.value
+            scan_bytes: bytes | None = _sample_nib_npa_bytes()
+            scan_filename: str | None = "sample_nib_npa.xlsx"
+        elif workbook is not None:
+            scan_source = source
+            scan_bytes = workbook.getvalue()
+            scan_filename = workbook.name
+        else:
+            scan_source = source
+            scan_bytes = None
+            scan_filename = None
+        if scan_bytes is None:
             st.warning("Choose an approved workbook before running the scan.")
         elif not attested:
             st.warning("Confirm the public-source attestation before running a scan.")
         else:
             result = WorkbookScanner(repo).run_scan(
                 case.case_id,
-                source,
-                workbook.getvalue(),
-                workbook.name,
+                scan_source,
+                scan_bytes,
+                scan_filename,
                 idempotency_key=idempotency_key or None,
                 actor_role=actor_role,
                 retrieved_at=retrieved_at.strip() or None,
@@ -321,7 +363,8 @@ def _render_scan(repo: CaseRepository) -> None:
                 st.info("Retry key matched an earlier scan; no duplicate import was created.")
             else:
                 st.success(f"Scan succeeded: {result.record_count} normalized public rows.")
-            st.json(result.to_dict())
+            with st.expander("Scan detail (raw)", expanded=False):
+                st.json(result.to_dict())
 
     resources = repo.list_resources(case.case_id, current_only=True)
     if resources:
@@ -663,6 +706,7 @@ def _render_opportunity_packet() -> None:
                 st.session_state.pop("op_packet_handoff", None)
                 st.error(f"Could not read the handoff: {exc.public_message}")
             except Exception:
+                logger.exception("radar-handoff parsing failed unexpectedly")
                 st.session_state.pop("op_packet_handoff", None)
                 st.error(
                     "Could not read the handoff. Confirm it is a valid "
@@ -697,7 +741,13 @@ def _render_opportunity_packet() -> None:
             st.warning("Enter a contract PIID before pulling live facts.")
         else:
             try:
-                resolution = pull_contract_facts(piid.strip())
+                # ADR-025: the bundled synthetic PIID resolves offline, from the
+                # committed sample -- no network call. Every other PIID is the
+                # unchanged live path.
+                if piid.strip() == SYNTHETIC_EXAMPLE_PIID:
+                    resolution = load_synthetic_example_facts()
+                else:
+                    resolution = pull_contract_facts(piid.strip())
                 st.session_state["op_packet_facts_result"] = {
                     "piid": piid.strip(),
                     "resolution": resolution,
@@ -707,7 +757,13 @@ def _render_opportunity_packet() -> None:
                         resolution.record is not None
                         and _prefill_award_place_inputs(resolution.record)
                     )
-                    success_message = "Attached live USAspending contract facts."
+                    if resolution.record is not None and resolution.record.synthetic_example:
+                        success_message = (
+                            "Loaded the bundled SYNTHETIC example contract facts "
+                            "(offline) — not a live retrieval."
+                        )
+                    else:
+                        success_message = "Attached live USAspending contract facts."
                     if prefilled:
                         success_message += _AWARD_PLACE_PREFILL_SUFFIX
                     st.success(success_message)
@@ -719,10 +775,23 @@ def _render_opportunity_packet() -> None:
             except ConnectorError as exc:
                 st.session_state.pop("op_packet_facts_result", None)
                 st.error(f"Could not retrieve contract facts: {exc.public_message}")
+                if exc.code in {"AWARD_NOT_FOUND", "UPSTREAM_UNAVAILABLE"}:
+                    # §5.3 / QW8: reconcile the offline/synthetic-PIID failure at
+                    # the point of failure instead of only in operator notes --
+                    # both codes cover the same reader intent ("why didn't my
+                    # paste resolve?"): a made-up PIID that a live search cannot
+                    # find, or a live search that cannot run at all offline.
+                    st.caption(
+                        "Offline or a synthetic example PIID cannot resolve live facts -- "
+                        "use the bundled SYNTHETIC example (below, at Origin) for an offline "
+                        "walkthrough, or a real PIID with a network connection."
+                    )
             except Exception:
+                logger.exception("contract-facts pull failed unexpectedly")
                 st.session_state.pop("op_packet_facts_result", None)
                 st.error(
-                    "Could not retrieve contract facts. The public source may be unavailable."
+                    "An unexpected internal error occurred while retrieving "
+                    "contract facts; it has been logged."
                 )
 
     facts_stored = st.session_state.get("op_packet_facts_result")
@@ -777,8 +846,10 @@ def _render_opportunity_packet() -> None:
             except ConnectorError as exc:
                 st.error(f"Could not retrieve contract facts: {exc.public_message}")
             except Exception:
+                logger.exception("contract-facts award-selection pull failed unexpectedly")
                 st.error(
-                    "Could not retrieve contract facts. The public source may be unavailable."
+                    "An unexpected internal error occurred while retrieving "
+                    "the selected award's contract facts; it has been logged."
                 )
 
     st.caption(
@@ -805,8 +876,12 @@ def _render_opportunity_packet() -> None:
             st.session_state.pop("op_packet_subawards_result", None)
             st.error(f"Could not retrieve subaward records: {exc.public_message}")
         except Exception:
+            logger.exception("subaward records pull failed unexpectedly")
             st.session_state.pop("op_packet_subawards_result", None)
-            st.error("Could not retrieve subaward records. The public source may be unavailable.")
+            st.error(
+                "An unexpected internal error occurred while retrieving "
+                "subaward records; it has been logged."
+            )
 
     # Reuse a stored subawards pull only when it matches the CURRENTLY resolved
     # award's generated id (mirrors the R2b upload reuse-guard style below): a
@@ -844,6 +919,7 @@ def _render_opportunity_packet() -> None:
         except ConnectorError as exc:
             st.error(f"Could not read the directory workbook: {exc.public_message}")
         except Exception:
+            logger.exception("directory workbook parsing failed unexpectedly")
             st.error("Could not read the directory workbook. Confirm it is an approved .xlsx export.")
 
     st.divider()
@@ -1008,6 +1084,7 @@ def _render_opportunity_packet() -> None:
                 st.session_state["op_packet_result"] = {
                     "county": county.strip().casefold(),
                     "state": state.strip().upper(),
+                    "year": year,
                     "geography": record,
                 }
                 st.success("Attached ACS geography context.")
@@ -1015,8 +1092,12 @@ def _render_opportunity_packet() -> None:
                 st.session_state.pop("op_packet_result", None)
                 st.error(f"Could not retrieve ACS context: {exc.public_message}")
             except Exception:
+                logger.exception("ACS geography context pull failed unexpectedly")
                 st.session_state.pop("op_packet_result", None)
-                st.error("Could not retrieve ACS context. The public source may be unavailable.")
+                st.error(
+                    "An unexpected internal error occurred while retrieving "
+                    "ACS geography context; it has been logged."
+                )
 
     # Only reuse a stored geography when it matches the current place inputs, so
     # a figure is never shown against the wrong county.
@@ -1026,6 +1107,7 @@ def _render_opportunity_packet() -> None:
         stored is not None
         and stored.get("county") == county.strip().casefold()
         and stored.get("state") == state.strip().upper()
+        and stored.get("year") == year
     ):
         geography = stored.get("geography")
 
@@ -1112,6 +1194,7 @@ def _render_opportunity_packet() -> None:
                 st.session_state.pop("op_packet_pl_result", None)
                 st.error(f"Could not read the PL workbook: {exc.public_message}")
             except Exception:
+                logger.exception("PL Services workbook parsing failed unexpectedly")
                 st.session_state.pop("op_packet_pl_result", None)
                 st.error("Could not read the PL workbook. Confirm it is an approved .xlsx export.")
 
@@ -1177,10 +1260,11 @@ def _render_opportunity_packet() -> None:
                 f"Could not retrieve Federal Register notices: {exc.public_message}"
             )
         except Exception:
+            logger.exception("Federal Register notices pull failed unexpectedly")
             st.session_state.pop("op_packet_fr_result", None)
             st.error(
-                "Could not retrieve Federal Register notices. The public "
-                "source may be unavailable."
+                "An unexpected internal error occurred while retrieving "
+                "Federal Register notices; it has been logged."
             )
 
     # Reuse a stored pull only when its canonical term matches the CURRENT
@@ -1271,7 +1355,7 @@ def render_public_bd_page(data: Any, target: float, scenario: str) -> None:
 
     del data, target, scenario
     st.markdown('<div class="page-kicker">Business Development / Public Evidence</div>', unsafe_allow_html=True)
-    st.markdown('<h1 class="page-title">BD Feasibility Scanner & Tracker</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="page-title">Opportunity Packet & Public-Evidence Tracker</h1>', unsafe_allow_html=True)
     st.markdown('<div class="page-subtitle">Turn an approved location into a repeatable evidence case: import, reconcile, review, resolve the route, and validate.</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="planning-banner">{_PUBLIC_BANNER}</div>', unsafe_allow_html=True)
     st.warning("Public directory evidence is discovery evidence only. The scanner never infers capacity, candidate supply, a relationship, or an acquisition outcome.")
@@ -1282,9 +1366,11 @@ def render_public_bd_page(data: Any, target: float, scenario: str) -> None:
         st.error("The local evidence ledger could not be opened. Check the configured TENS_HQ_DB_PATH and filesystem permissions.")
         return
 
-    cases_tab, new_tab, scan_tab, verify_tab, assess_tab, packet_tab = st.tabs(
-        ["Cases", "New Case", "Scan & Evidence", "Verification", "Assessment", "Opportunity Packet"]
+    packet_tab, cases_tab, new_tab, scan_tab, verify_tab, assess_tab = st.tabs(
+        ["Opportunity Packet", "Cases", "New Case", "Scan & Evidence", "Verification", "Assessment"]
     )
+    with packet_tab:
+        _render_opportunity_packet()
     with cases_tab:
         _render_cases(repo)
     with new_tab:
@@ -1295,5 +1381,3 @@ def render_public_bd_page(data: Any, target: float, scenario: str) -> None:
         _render_verification(repo)
     with assess_tab:
         _render_assessment(repo)
-    with packet_tab:
-        _render_opportunity_packet()

@@ -15,8 +15,8 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from conftest import counsel_gate_violations
+
 from tens_hq.capture_window import CaptureWindowPolicy, assess_capture_window
 from tens_hq.connectors import ContractFactsRecord, GeographyRecord
 from tens_hq.incumbent_leads import derive_incumbent_leads

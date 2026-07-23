@@ -16,11 +16,11 @@ from pathlib import Path
 import pytest
 
 from tens_hq.connectors import (
+    STATE_FIPS,
     Assurance,
     ConnectorError,
     GeographyRecord,
     RetrievedPayload,
-    STATE_FIPS,
     SourceKind,
     SourceMetadata,
     http_get,

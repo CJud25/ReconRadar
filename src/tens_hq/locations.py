@@ -7,8 +7,8 @@ address-level fields are intentionally not represented by this module.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any
 
 

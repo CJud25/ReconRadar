@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 from pathlib import Path
-import sys
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-import streamlit as st
+import streamlit as st  # noqa: E402 -- sys.path must be set (above) first
 
-from tens_hq.constants import APP_VERSION, DEFAULT_SEED, DEFAULT_TARGET, SYNTHETIC_BANNER
-from tens_hq.demo_tour import DEMO_TOUR
-from tens_hq.pages import PAGE_RENDERERS, apply_theme
-from tens_hq.roles import allowed_pages, pilot_mode_enabled
-from tens_hq.synthetic import generate_demo_data
+from tens_hq.constants import (  # noqa: E402
+    APP_VERSION,
+    DEFAULT_SEED,
+    DEFAULT_TARGET,
+    SYNTHETIC_BANNER,
+)
+from tens_hq.demo_tour import DEMO_TOUR  # noqa: E402
+from tens_hq.pages import PAGE_RENDERERS, apply_theme  # noqa: E402
+from tens_hq.roles import allowed_pages, pilot_mode_enabled  # noqa: E402
+from tens_hq.synthetic import generate_demo_data  # noqa: E402
 
 st.set_page_config(
     page_title="ReconRadar",
@@ -79,7 +84,7 @@ def _render_guided_demo() -> None:
     st.markdown(f"**{beat.title}**")
     st.caption(beat.sentence)
     st.caption(f"Point at: {beat.highlight}")
-    controls = st.columns(3)
+    controls = st.columns([1, 2, 1])
     controls[0].button(
         "◀",
         key="tour_previous",
@@ -141,17 +146,13 @@ def main() -> None:
             # The guided tour is a demo aid; a pilot session is real work.
             _render_guided_demo()
             st.markdown("---")
-        if pilot_mode or page == "BD Feasibility":
-            # The public scanner is deliberately independent from the
-            # synthetic planning model; do not show controls that could make
-            # a directory row look like a forecast or feasibility score.
-            scenario = "Base"
-            target_pct = DEFAULT_TARGET * 100.0
-        else:
-            st.markdown("**Planning controls**")
-            scenario = st.selectbox("Scenario", ["Base", "Conservative", "Optimistic"])
-            target_pct = st.slider("Planning target", 70.0, 82.0, DEFAULT_TARGET * 100.0, 0.5)
-            st.caption("Site indicators are planning proxies. They are not official ODLH determinations.")
+        # Both page renderers immediately `del` these args (pages.py,
+        # bd_page.py) -- the "Planning controls" selectbox/slider changed
+        # nothing on the Governance page and invited a reviewer to distrust
+        # a trust page (§5.10). scenario/target_pct stay defined as harmless
+        # constants for the PAGE_RENDERERS(...) call below.
+        scenario = "Base"
+        target_pct = DEFAULT_TARGET * 100.0
         st.markdown("---")
         st.caption(f"Demo v{APP_VERSION} · Seed {DEFAULT_SEED}")
 

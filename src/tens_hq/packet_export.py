@@ -54,6 +54,7 @@ from .staffing_whatif import StaffingWhatIfResult
 
 _ASSURANCE_API_RETRIEVED = "API_RETRIEVED"
 _ASSURANCE_USER_ATTESTED = "USER_ATTESTED"
+_ASSURANCE_SYNTHETIC_EXAMPLE = "SYNTHETIC_EXAMPLE"
 
 # Used for both a missing retrieval timestamp and a missing reference -- the
 # exact wording the SourceEntry.retrieved_at field promises (see the
@@ -81,7 +82,9 @@ class SourceEntry:
     literal ``"Not supplied (analyst attestation absent)"`` when no
     attestation time is available (e.g. an uploaded directory workbook, which
     carries no retrieval timestamp at all). ``assurance`` is always one of
-    ``API_RETRIEVED`` or ``USER_ATTESTED``.
+    ``API_RETRIEVED``, ``USER_ATTESTED``, or ``SYNTHETIC_EXAMPLE`` (ADR-025:
+    the bundled offline synthetic-example contract-facts row only -- never a
+    real record, never claimed as a live retrieval).
     """
 
     source: str  # e.g. "Contract Facts (live, USAspending award detail)"
@@ -164,6 +167,16 @@ def _gate_row(eligibility: object | None, contract_facts: ContractFactsRecord | 
 
 
 def _contract_facts_live_row(contract_facts: ContractFactsRecord | None) -> SectionEntry:
+    if contract_facts is not None and contract_facts.synthetic_example:
+        # ADR-025: the bundled offline SYNTHETIC-example record must not claim
+        # a live pull in the ledger either -- worded with no "live" token so
+        # the honesty test can be a clean substring ban.
+        return SectionEntry(
+            "Contract Facts (SYNTHETIC example)",
+            True,
+            "Bundled SYNTHETIC example facts attached — offline, not a real "
+            "USAspending API retrieval.",
+        )
     if contract_facts is not None:
         return SectionEntry(
             "Contract Facts (live)",
@@ -422,7 +435,19 @@ def derive_source_manifest(
             )
         )
 
-    if contract_facts is not None:
+    if contract_facts is not None and contract_facts.synthetic_example:
+        # ADR-025: never API_RETRIEVED, never a live award URL -- reference is
+        # the same honest, non-URL provenance marker the packet body cites.
+        entries.append(
+            SourceEntry(
+                source="Contract Facts (SYNTHETIC example, offline)",
+                reference=contract_facts.source_url,
+                retrieved_at=contract_facts.retrieved_at,
+                assurance=_ASSURANCE_SYNTHETIC_EXAMPLE,
+                notes="SYNTHETIC example — not real USAspending data.",
+            )
+        )
+    elif contract_facts is not None:
         entries.append(
             SourceEntry(
                 source="Contract Facts (live, USAspending award detail)",
@@ -609,6 +634,32 @@ def _cell(value: object) -> str:
     return _md(value).replace("|", "/")
 
 
+# A URL-safe sibling of ``_md``/``_cell`` (§5.8 fix): cited source URLs (FR,
+# USAspending, ACS, subawards) legitimately contain "[]" in query params
+# (e.g. FR's conditions[type][]=NOTICE), so the blanket escape above renders
+# visible "\[" / "\]" that corrupt paste-and-resolve in the downloadable
+# export. A clean absolute http(s) value with no whitespace/angle-brackets/
+# pipe renders as a CommonMark autolink (``<https://...>``), which preserves
+# "[]()" literally and cannot itself carry a table- or markdown-injection
+# (autolinks cannot contain whitespace, angle brackets, or "|"). Anything
+# else -- a hostile or non-URL reference such as an uploaded filename or
+# "HOURS mode entry" -- still falls back to the same two-layer ``_cell``
+# escaping as before.
+def _md_url(value: object) -> str:
+    if value is None:
+        return ""
+    flat = " ".join(str(value).splitlines())
+    if flat.startswith(("http://", "https://")) and not any(
+        ch in flat for ch in (" ", "\t", "<", ">", "|")
+    ):
+        return f"<{flat}>"
+    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
+
+
+def _cell_url(value: object) -> str:
+    return _md_url(value).replace("|", "/")
+
+
 # --- Rendering ---------------------------------------------------------------
 
 PACKET_EXPORT_TITLE = "# Opportunity Packet — cited export"
@@ -660,7 +711,7 @@ def _source_manifest_lines(manifest: Sequence[SourceEntry]) -> list[str]:
         ]
     )
     lines.extend(
-        f"| {_cell(entry.source)} | {_cell(entry.reference)} | {_cell(entry.retrieved_at)} | "
+        f"| {_cell(entry.source)} | {_cell_url(entry.reference)} | {_cell(entry.retrieved_at)} | "
         f"{_cell(entry.assurance)} | {_cell(entry.notes)} |"
         for entry in manifest
     )

@@ -9,12 +9,12 @@ case-store implementation, so a parser failure cannot mutate prior evidence.
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from hashlib import sha256
-import inspect
-from typing import Any, Callable, Iterable, Mapping, MutableMapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 from uuid import uuid4
 
 from .connectors import (
@@ -24,8 +24,8 @@ from .connectors import (
     NormalizedRecord,
     SourceKind,
     SourceMetadata,
-    connector_for,
     coerce_source_kind,
+    connector_for,
     expected_headers,
     normalize_zip,
     service_location_matches,

@@ -169,3 +169,12 @@ validate."
   correctly through the real UI widgets (checkbox + number_input; no
   `file_uploader` involved, so no `AppTest` version-skew workaround is
   needed here).
+
+> **Update 2026-07-23:** `metrics.py` no longer exists in `src` (removed per
+> ADR-016, which predates this ADR's 2026-07-21 date but was itself finished
+> after this text was written). Every reference above to "mirroring
+> `metrics.safe_ratio`'s NaN-honesty idiom without importing the module" is
+> retained as-written for lineage — it correctly describes the anti-
+> cross-boundary-import convention this slice followed at the time, and
+> `_safe_ratio`'s local copy in `staffing_whatif.py` still exists and still
+> works exactly as documented; only the module it was mirroring is gone.

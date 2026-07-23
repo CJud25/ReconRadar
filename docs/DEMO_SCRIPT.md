@@ -9,8 +9,9 @@ Timing: about 12 minutes for Acts 1–3; Acts 4–5 add about 5 more. The packet
 fully offline with the bundled SYNTHETIC examples; the live pulls need internet.
 
 > The sidebar's "▶ Guided demo" walks this script's spine — six packet beats,
-> then the governance close — and can pace the walkthrough. It navigates pages
-> only: opening the **Opportunity Packet** tab on each beat is still your click.
+> then the governance close — and can pace the walkthrough. The BD page now
+> lands on the **Opportunity Packet** tab, so the packet beats need no manual
+> tab click; the tour still switches pages for the governance close.
 
 ## Act 1 — Setup (1 minute)
 
@@ -19,9 +20,10 @@ fully offline with the bundled SYNTHETIC examples; the live pulls need internet.
    DIRECTORY DATA ONLY* — and, at the top of the page body, the warning line:
    public directory evidence is discovery evidence only; the scanner never infers
    capacity, candidate supply, a relationship, or an acquisition outcome.
-3. Open the **Opportunity Packet** tab (rightmost). Read the framing caption aloud:
-   the packet "never renders a score, ranking, or bid/no-bid recommendation."
-   That sentence is the product thesis; the next ten minutes are its proof.
+3. The page lands on the **Opportunity Packet** tab — no tab click needed. Read
+   the framing caption aloud: the packet "never renders a score, ranking, or
+   bid/no-bid recommendation." That sentence is the product thesis; the next
+   ten minutes are its proof.
 
 ## Act 2 — Assemble the packet (7 minutes)
 
@@ -45,7 +47,12 @@ each beat — the demo's credibility rests on never overclaiming what a section 
    pick the exact award — it never auto-picks. Obligated dollars and the ceiling
    stay distinct; a missing amount reads "not reported," never $0.00. The pull
    also cites the award's reported description and place of performance and
-   prefills empty place inputs.
+   prefills empty place inputs. **Offline note (ADR-025):** the bundled
+   SYNTHETIC PIID (`SYNTH-A2-0001`, prefilled by the handoff above) resolves
+   from a committed, invented sample instead of a network call — the section
+   still populates fully, labeled "SYNTHETIC example — offline, not a live
+   retrieval" throughout, never `Assurance API_RETRIEVED`. A real PIID still
+   needs a network connection.
 3. **Eligibility gate.** Scroll the rendered packet: the gate sits above all other
    evidence and now reads from the live set-aside code, superseding the analyst
    field.
@@ -108,7 +115,11 @@ The same page's other tabs are the repeatable evidence workflow around the packe
 NIB or SourceAmerica workbook, then separately the AbilityOne Services workbook —
 one upload normally cannot satisfy both evidence gates), **Verification**, and
 **Assessment** — which reports evidence *readiness*, never a score. Case lifecycle
-states are distinct from evidence-readiness labels by design.
+states are distinct from evidence-readiness labels by design. **No network? Tick
+"Use the bundled SYNTHETIC NIB/NPA example instead of an upload" on the Scan tab
+(ADR-026) to run the NIB/NPA lane offline** — the same bundled Denver/Aurora, CO
+rows the packet's PL cross-reference sample already uses, so a case can be walked
+all the way to Validated with no upload and no network.
 
 ## Act 5 (optional) — Governance close (2 minutes)
 
@@ -138,8 +149,13 @@ to explicit human review.
   `TENS_HQ_CENSUS_API_KEY` environment variable before launching, or the pull
   fails loud with sign-up instructions. The key rides only the wire request —
   cited source URLs stay keyless by construction (test-locked). Everything else is offline; for a no-network
-  demo, skip them and run on the bundled SYNTHETIC examples. The packet stays
-  honest about what's missing — the gate reads Unknown, Geography shows its
+  demo, skip them and run on the bundled SYNTHETIC examples. **The Contract
+  Facts pull is the one exception (ADR-025): the bundled SYNTHETIC PIID
+  `SYNTH-A2-0001` now resolves from a committed offline sample instead of a
+  network call, so that section (and the Eligibility Gate and Capture Window
+  it feeds) populates fully offline, clearly labeled SYNTHETIC throughout —
+  never `Assurance API_RETRIEVED`. Every other PIID still needs a network.**
+  The packet stays honest about what's missing — the gate reads Unknown, Geography shows its
   placeholder, and the R2a map states per criterion what is absent; sections whose
   evidence was never attached are omitted from the body and listed as not included,
   with the reason, in the export's Section ledger.
@@ -152,17 +168,17 @@ to explicit human review.
   result rather than showing it against the wrong contract — expected behavior, not
   a bug.
 - **In-app guided tour:** the sidebar "▶ Guided demo" follows this script's
-  sequence (packet-first, governance close last). It changes the page, never the
-  tab — open the Opportunity Packet tab yourself — and its beat captions quote
-  the real widget labels, locked by a test against the page source.
+  sequence (packet-first, governance close last). The BD page now lands on the
+  Opportunity Packet tab, so the packet beats need no manual tab click; the
+  tour still switches pages for the governance close, and its beat captions
+  quote the real widget labels, locked by a test against the page source.
 - **Counsel-gated content:** the C3/C4 claims (named with their citations in
   ADR-020 and the counsel packet) are with counsel and are excluded from the
   packet's copy. Guard tests lock the whole rendered packet, the full export,
   the guided-tour copy, and every packet module's source text against that
   vocabulary. Do not ad-lib it into the demo.
-- **If asked why a no-score product lives on a page named "BD Feasibility Scanner
-  & Tracker":** the name is legacy; the page records evidence readiness and case
-  state, never a feasibility score. Answer it head-on — the question is the thesis.
+- **If asked why the page is titled the way it is:** the page is titled to match
+  the thesis — it records cited evidence and case state, never a feasibility score.
 
 ## What we can do next
 

@@ -15,7 +15,7 @@ import re
 import unicodedata
 import zipfile
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 from xml.etree import ElementTree as ET
 
 from .base import (
@@ -28,7 +28,6 @@ from .base import (
     coerce_source_kind,
     stable_row_hash,
 )
-
 
 # Conservative defaults keep an uploaded workbook bounded even when a caller
 # does not provide an explicit policy.  Limits can be overridden per connector

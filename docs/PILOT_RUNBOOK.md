@@ -22,6 +22,12 @@ a suitability determination — the Commission determines suitability.
   planning controls; it is not an access-control boundary.
 - **Case ledger location** (optional): `TENS_HQ_DB_PATH` overrides where the
   SQLite case/evidence ledger is written (default `data/runtime/`).
+- **Case tracker, offline (optional, ADR-026)**: the **Cases** / **Scan &
+  Evidence** tabs are the repeatable evidence workflow around the packet
+  (`DEMO_SCRIPT.md` Act 4). With no network or real workbook on hand, tick
+  "Use the bundled SYNTHETIC NIB/NPA example instead of an upload" on the
+  Scan tab to run the NIB/NPA lane against the same bundled Denver/Aurora,
+  CO rows the packet's PL cross-reference sample uses.
 - **Inputs the analyst brings per opportunity**:
   - A `radar-handoff/v1` JSON from GovConRadar's Contract Detail page
     ("Download ReconRadar handoff") — or a pasted PIID with no handoff.
@@ -37,6 +43,19 @@ a suitability determination — the Commission determines suitability.
 $env:TENS_HQ_PILOT_MODE = "1"
 $env:TENS_HQ_CENSUS_API_KEY = "<your key>"
 .\run_demo.ps1
+```
+
+**Docker, with a persistent ledger.** `Dockerfile` declares
+`/app/data/runtime` (where the case ledger lives) as a volume mount point, but
+a container recreated with no volume attached loses the ledger silently. Mount
+a named volume so a redeploy does not wipe cases:
+
+```bash
+docker build --tag reconradar:ci .
+docker run -p 8501:8501 \
+  -e TENS_HQ_PILOT_MODE=1 -e TENS_HQ_CENSUS_API_KEY=<your key> \
+  -v reconradar_runtime:/app/data/runtime \
+  reconradar:ci
 ```
 
 ## Per-opportunity workflow

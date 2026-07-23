@@ -39,9 +39,10 @@ first real run (see the repository handoff/caveats), consistent with ADR-011.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
 import json
+from dataclasses import dataclass, replace
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable
 
 from .api import RetrievedPayload, http_get, http_post
@@ -118,6 +119,7 @@ class ContractFactsRecord:
     pop_country_code: str | None
     source_url: str  # the detail endpoint URL (the citation)
     retrieved_at: str  # RetrievedPayload.retrieved_at.isoformat()
+    synthetic_example: bool = False  # True only for the bundled offline example (ADR-025)
 
     def to_public_payload(self) -> dict[str, Any]:
         """A flat, public dict of exactly the fields above (mirrors GeographyRecord)."""
@@ -155,6 +157,7 @@ class ContractFactsRecord:
             "pop_country_code": self.pop_country_code,
             "source_url": self.source_url,
             "retrieved_at": self.retrieved_at,
+            "synthetic_example": self.synthetic_example,
         }
 
 
@@ -455,6 +458,50 @@ def pull_contract_facts(
     return ContractFactsResolution(piid=piid, record=parse_contract_facts(detail, piid=piid))
 
 
+# --- Offline SYNTHETIC-example facts (ADR-025) --------------------------------
+#
+# The bundled Radar-handoff sample (``data/samples/sample_radar_handoff.json``)
+# carries the synthetic PIID below. When an analyst pulls contract facts for
+# exactly that PIID, the BD page (``bd_page.py``) serves this bundled,
+# offline, honestly-labeled example instead of a live network call, so the
+# guided demo reaches a populated flagship moment with no network and no red
+# error. It is gated to this single PIID and never resembles a live retrieval.
+
+SYNTHETIC_EXAMPLE_PIID = "SYNTH-A2-0001"
+
+# An honest, non-URL provenance string -- deliberately NOT a usaspending.gov
+# URL, so this record can never be cited as if it were a live retrieval.
+_SYNTHETIC_EXAMPLE_SOURCE_MARKER = (
+    "bundled SYNTHETIC example (offline) -- not a live USAspending retrieval"
+)
+
+
+def load_synthetic_example_facts() -> ContractFactsResolution:
+    """Build the bundled, offline, honestly-labeled SYNTHETIC-example contract
+    facts for :data:`SYNTHETIC_EXAMPLE_PIID` (ADR-025).
+
+    Reads the committed ``data/samples/sample_usaspending_award.json`` fixture
+    -- invented content, structurally shaped like a real USAspending award
+    detail -- and parses it through the same :func:`parse_contract_facts` a
+    live pull uses. The resulting record is then marked
+    ``synthetic_example=True`` with its ``source_url`` replaced by an honest,
+    non-URL provenance marker, so it can never be mistaken for, or cite, a
+    live retrieval. No network is touched; this function opens no socket.
+    """
+
+    path = Path(__file__).resolve().parents[3] / "data" / "samples" / "sample_usaspending_award.json"
+    body = path.read_bytes()
+    payload = RetrievedPayload(
+        body=body,
+        retrieved_at=datetime(2026, 7, 22, 12, 0, tzinfo=timezone.utc),
+        source_uri=_SYNTHETIC_EXAMPLE_SOURCE_MARKER,
+        upstream_status=200,
+    )
+    record = parse_contract_facts(payload, piid=SYNTHETIC_EXAMPLE_PIID)
+    record = replace(record, synthetic_example=True, source_url=_SYNTHETIC_EXAMPLE_SOURCE_MARKER)
+    return ContractFactsResolution(piid=SYNTHETIC_EXAMPLE_PIID, record=record)
+
+
 # --- Subawards (teaming-posture evidence for A5's incumbent-and-teaming-leads) -----
 #
 # A second, independent POST call an analyst may make once an award is resolved:
@@ -591,12 +638,14 @@ __all__ = [
     "ContractFactsResolution",
     "DEFAULT_AWARD_SEARCH_LIMIT",
     "DEFAULT_SUBAWARDS_LIMIT",
+    "SYNTHETIC_EXAMPLE_PIID",
     "SubawardRecord",
     "SubawardsResult",
     "USASPENDING_API_BASE",
     "award_detail_url",
     "award_search_body",
     "award_search_url",
+    "load_synthetic_example_facts",
     "parse_award_candidates",
     "parse_contract_facts",
     "parse_subawards",

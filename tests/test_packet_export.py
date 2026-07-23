@@ -11,8 +11,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-
 from conftest import counsel_gate_violations
+
 from tens_hq.connectors import (
     ContractFactsRecord,
     FRNoticeRecord,
@@ -23,20 +23,18 @@ from tens_hq.connectors import (
 )
 from tens_hq.eligibility_gate import assess_eligibility
 from tens_hq.opportunity_packet import PACKET_FRAMING, build_opportunity_packet_markdown
-from tens_hq.pl_match import PLMatchResult
-from tens_hq.radar_handoff import RadarHandoff, RadarHandoffClaims
-from tens_hq.staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 from tens_hq.packet_export import (
     MANIFEST_EMPTY_NOTE,
     PACKET_EXPORT_TITLE,
-    SectionEntry,
     SourceEntry,
     assemble_packet_export,
     derive_section_ledger,
     derive_source_manifest,
     packet_export_filename,
 )
-
+from tens_hq.pl_match import PLMatchResult
+from tens_hq.radar_handoff import RadarHandoff, RadarHandoffClaims
+from tens_hq.staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 
 # --- Fixtures ------------------------------------------------------------
 
@@ -249,6 +247,49 @@ def test_ledger_all_absent_render_is_honest_about_every_row() -> None:
             assert row.basis.strip()
             assert "no data" not in row.basis.lower()
             assert "none exists" not in row.basis.lower()
+
+
+def test_ledger_synthetic_contract_facts_row_never_says_live() -> None:
+    # ADR-025 (mandatory honesty test): the Section ledger is a THIRD honesty
+    # surface (alongside the body heading and the Source manifest) -- the
+    # synthetic row's name and basis must contain no "live"/"Live USAspending"
+    # token, so an export can never claim a live pull in its own ledger one
+    # row above a manifest row honestly labeled SYNTHETIC_EXAMPLE.
+    cf = _cf(synthetic_example=True)
+    ledger = derive_section_ledger(
+        eligibility=None,
+        contract_facts=cf,
+        geography=None,
+        pl_matches=None,
+        subawards=None,
+        directory_agency_names=None,
+    )
+    row = ledger[2]  # fixed order: Origin, Eligibility gate, Contract Facts (live)
+    assert row.name.startswith("Contract Facts (")
+    assert "analyst" not in row.name
+    assert row.name == "Contract Facts (SYNTHETIC example)"
+    assert "live" not in row.name.lower()
+    assert "live" not in row.basis.lower()
+    assert row.included is True
+
+
+def test_ledger_non_synthetic_contract_facts_row_is_unchanged() -> None:
+    # Regression companion: a real (synthetic_example=False, the default)
+    # record must still yield the exact original "Contract Facts (live)" row.
+    cf = _cf()
+    assert cf.synthetic_example is False
+    ledger = derive_section_ledger(
+        eligibility=None,
+        contract_facts=cf,
+        geography=None,
+        pl_matches=None,
+        subawards=None,
+        directory_agency_names=None,
+    )
+    row = ledger[2]
+    assert row.name == "Contract Facts (live)"
+    assert row.basis == "Live USAspending contract-facts pull attached to this render."
+    assert row.included is True
 
 
 def test_ledger_everything_attached_all_included() -> None:
@@ -655,6 +696,51 @@ def test_manifest_contract_facts_row_assurance_and_reference() -> None:
     assert row.assurance == "API_RETRIEVED"
     assert row.reference == cf.source_url
     assert row.retrieved_at == cf.retrieved_at
+
+
+def test_manifest_synthetic_example_row_is_never_api_retrieved_or_a_live_url() -> None:
+    # ADR-025 (mandatory honesty test): the bundled offline synthetic-example
+    # record must produce a manifest row that can never be mistaken for a
+    # live USAspending retrieval.
+    cf = _cf(
+        synthetic_example=True,
+        source_url="bundled SYNTHETIC example (offline) -- not a live USAspending retrieval",
+    )
+    manifest = derive_source_manifest(
+        contract_facts=cf,
+        subawards=None,
+        geography=None,
+        pl_matches=None,
+        directory_source_label=None,
+        set_aside_analyst_value=None,
+    )
+    assert len(manifest) == 1
+    row = manifest[0]
+    assert row.assurance == "SYNTHETIC_EXAMPLE"
+    assert row.assurance != "API_RETRIEVED"
+    assert "usaspending.gov" not in row.reference
+    assert "api.usaspending" not in row.reference
+    assert "SYNTHETIC example" in row.notes
+
+
+def test_manifest_non_synthetic_contract_facts_row_is_unchanged() -> None:
+    # Regression companion to the synthetic test above: a real
+    # (synthetic_example=False, the default) record must still produce the
+    # exact original API_RETRIEVED row.
+    cf = _cf()
+    assert cf.synthetic_example is False
+    manifest = derive_source_manifest(
+        contract_facts=cf,
+        subawards=None,
+        geography=None,
+        pl_matches=None,
+        directory_source_label=None,
+        set_aside_analyst_value=None,
+    )
+    row = manifest[0]
+    assert row.source == "Contract Facts (live, USAspending award detail)"
+    assert row.assurance == "API_RETRIEVED"
+    assert row.reference == cf.source_url
 
 
 def test_manifest_subawards_truncated_note() -> None:
@@ -1182,6 +1268,51 @@ def test_hostile_manifest_reference_is_two_layer_escaped_in_table_cell() -> None
     # The pipe must not survive raw inside the rendered cell (it would break
     # the table); it is replaced with "/" after markdown-escaping.
     assert "\\)/EXTRA" in export_doc
+
+
+def test_manifest_bracketed_source_url_is_autolinked_not_backslash_escaped() -> None:
+    # §5.8: a cited source_url (FR here, but this is the one render point
+    # shared by contract facts/ACS/subawards too) legitimately carries "[]"
+    # in query params. It must paste-and-resolve cleanly from the downloaded
+    # export -- no visible backslash escapes -- while a non-URL reference
+    # (e.g. an uploaded filename) still routes through the escaped `_cell`.
+    bracketed_url = (
+        "https://www.federalregister.gov/api/v1/documents.json"
+        "?conditions[type][]=NOTICE&per_page=20"
+    )
+    manifest = (
+        SourceEntry(
+            source="Procurement List activity (live, Federal Register)",
+            reference=bracketed_url,
+            retrieved_at="2026-07-21T18:00:00+00:00",
+            assurance="API_RETRIEVED",
+            notes="",
+        ),
+        SourceEntry(
+            source="AbilityOne NPA directory (analyst upload)",
+            reference="npa_directory[2026].xlsx",
+            retrieved_at="Not supplied (analyst attestation absent)",
+            assurance="USER_ATTESTED",
+            notes="",
+        ),
+    )
+    export_doc = assemble_packet_export(
+        body_markdown="body\n",
+        piid="X",
+        county="Denver",
+        state="CO",
+        ledger=(),
+        manifest=manifest,
+        as_of=_AS_OF,
+    )
+    # The URL's own brackets are never backslash-escaped, and it pastes
+    # verbatim inside a CommonMark autolink.
+    assert "conditions\\[type\\]\\[\\]" not in export_doc
+    assert "conditions[type][]=NOTICE" in export_doc
+    assert f"<{bracketed_url}>" in export_doc
+    # The non-URL filename reference is unaffected -- still escaped, not autolinked.
+    assert "npa_directory\\[2026\\].xlsx" in export_doc
+    assert "<npa_directory" not in export_doc
 
 
 def test_hostile_piid_and_county_are_escaped_in_header() -> None:

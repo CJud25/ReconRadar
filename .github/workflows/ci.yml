@@ -11,14 +11,21 @@ permissions:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is the CI-canonical/numpy 2.4.6 branch; 3.12 exercises the
+        # numpy>=2.5.1 branch real deployments install (pyproject.toml /
+        # requirements.txt python_version markers).
+        python-version: ["3.11", "3.12"]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: |
             requirements.txt
@@ -27,11 +34,55 @@ jobs:
       - name: Install development dependencies
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
+      - name: Lint (ruff)
+        run: ruff check .
+
       - name: Run tests
         run: python -m pytest -q
 
       - name: Validate deterministic synthetic data
         run: python scripts/validate_demo_data.py
 
+      # Dependency scan, container build, and the container smoke boot run
+      # once (the 3.11 leg) -- they exercise the shipped artifact, not the
+      # interpreter matrix, so duplicating them per Python version is pure
+      # cost with no extra signal.
+      - name: Dependency vulnerability scan (pip-audit)
+        if: matrix.python-version == '3.11'
+        # TODO(owner): pip-audit currently flags advisories on the pinned
+        # streamlit==1.46.1 (PYSEC-2026-212/2285) and its transitive pillow
+        # dependency (PYSEC-2026-165 and others); fixing either requires a
+        # streamlit major-version bump, which is a runtime-behavior change
+        # this CI-hardening task does not make unilaterally (563+ tests are
+        # AppTest-pinned to this exact streamlit version -- see ADR history).
+        # Non-blocking until the owner triages and bumps the pinned version.
+        run: pip-audit -r requirements.txt || true
+
       - name: Build demo container
+        if: matrix.python-version == '3.11'
         run: docker build --tag reconradar:ci .
+
+      - name: Container smoke boot
+        if: matrix.python-version == '3.11'
+        # /_stcore/health is a Streamlit server-liveness endpoint; it does
+        # NOT execute app.py's script or open the case ledger, so this only
+        # proves the container boots and serves -- it is not a substitute
+        # for the Dockerfile VOLUME's writable-ownership review (see the
+        # honesty note on that change).
+        run: |
+          docker run -d --name reconradar-smoke -p 8501:8501 reconradar:ci
+          ok=0
+          for i in $(seq 1 15); do
+            if curl -fsS http://localhost:8501/_stcore/health; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          docker logs reconradar-smoke || true
+          docker stop reconradar-smoke || true
+          docker rm reconradar-smoke || true
+          if [ "$ok" != "1" ]; then
+            echo "Container did not report healthy within the smoke-boot budget."
+            exit 1
+          fi

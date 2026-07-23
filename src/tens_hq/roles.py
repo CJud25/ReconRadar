@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import os
 
-
 PILOT_MODE_ENV = "TENS_HQ_PILOT_MODE"
 
 ALL_PAGES = ("BD Feasibility", "Privacy & Governance")

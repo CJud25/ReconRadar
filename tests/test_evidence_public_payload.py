@@ -4,7 +4,6 @@ import pytest
 
 from tens_hq.evidence import EvidenceValidationError, ensure_public_payload
 
-
 # The two-app wall (N7) must be drawn at the right key: reject person-level PII
 # while accepting the public organization contact fields a resource directory
 # legitimately carries.  These regression tests pin both directions.

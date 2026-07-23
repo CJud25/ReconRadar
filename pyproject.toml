@@ -11,9 +11,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["openpyxl==3.1.5", "pytest==8.4.1"]
+dev = ["openpyxl==3.1.5", "pip-audit==2.10.1", "pytest==8.4.1", "ruff==0.15.22"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+# E501 (line-too-long) is intentionally excluded: this codebase's established
+# style favors long single-line comprehensions/assertions/docstrings over
+# hard-wrapping (515 pre-existing hits at line-length 100, spanning nearly
+# every module). Enforcing it would force either a sweeping, high-risk
+# reformat across most of the tree or a much larger line-length than any
+# single value could sensibly justify (violations range up to 438 chars).
+# The rest of E, plus F/W/I, still catch real defects (unused imports/names,
+# ambiguous identifiers, unsorted imports) at a low, surgical diff cost.
+ignore = ["E501"]

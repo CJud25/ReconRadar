@@ -41,7 +41,7 @@ def apply_theme() -> None:
             padding:.8rem .9rem; border-radius:.6rem; min-height:112px; }
         div[data-testid="stMetricLabel"] { color:#52606D; }
         div[data-testid="stDataFrame"] { border:1px solid #D9E2EC; border-radius:.5rem; }
-        .small-note { color:#627D98; font-size:.82rem; }
+        .small-note { color:#52606D; font-size:.82rem; }
         h2, h3 { color:#15324B; }
         </style>
         """,
@@ -98,6 +98,10 @@ def render_governance(data: DemoData, target: float, scenario: str) -> None:
     left, right = st.columns([1, 1.1])
     with left:
         st.markdown("### Data inventory")
+        st.caption(
+            "All rows below are deterministic synthetic fixtures used only to validate the app's "
+            "privacy/schema contracts; none are real people or organizations, and none join to public evidence."
+        )
         st.dataframe(counts, hide_index=True, use_container_width=True)
     with right:
         st.markdown("### Deliberately excluded")
@@ -114,11 +118,11 @@ def render_governance(data: DemoData, target: float, scenario: str) -> None:
         )
         st.markdown("### Decision boundaries")
         st.markdown(
-            "- Site views are internal planning indicators.\n"
-            "- Organization scenarios use summed hours, but remain synthetic.\n"
-            "- Eligibility/document statuses activate only after the synthetic start-stage gate.\n"
-            "- Source scores use mature cohorts and small-sample shrinkage.\n"
-            "- BD Feasibility is a cited, non-numeric evidence packet — never a feasibility score or bid/no-bid recommendation.\n"
+            "- The Opportunity Packet is a cited, non-numeric evidence sheet — never a feasibility score, PWin, ranking, or bid/no-bid recommendation.\n"
+            "- Live sources are pulled only on an explicit analyst action, each fails loud, and every fact carries a source URL, retrieval time, and assurance label.\n"
+            "- Public workbook rows and synthetic demonstration data never join; synthetic fixtures never become claims about real organizations or people.\n"
+            "- The case ledger is local, single-user pilot infrastructure — not an authentication, authorization, encryption, backup, or multi-user boundary.\n"
+            "- Analyst-typed and analyst-uploaded values are attestations, not independently verified evidence.\n"
             "- All generated communications and reports require human review."
         )
 

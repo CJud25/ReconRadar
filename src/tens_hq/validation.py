@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pandas as pd
-
 from .constants import PROHIBITED_COLUMN_TOKENS
 from .synthetic import DemoData
 

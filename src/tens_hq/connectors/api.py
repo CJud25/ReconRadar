@@ -19,11 +19,11 @@ turned into a silently-empty result.
 
 from __future__ import annotations
 
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Protocol, runtime_checkable
-import urllib.error
-import urllib.request
 
 from .base import ConnectorError, SourceKind, utc_now
 

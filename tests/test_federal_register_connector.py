@@ -16,11 +16,11 @@ from pathlib import Path
 import pytest
 
 from tens_hq.connectors import (
+    WORKBOOK_SOURCE_KINDS,
     FRNoticeRecord,
     PLNoticesResult,
     RetrievedPayload,
     SourceKind,
-    WORKBOOK_SOURCE_KINDS,
     notices_url,
     parse_pl_notices,
     pull_pl_notices,

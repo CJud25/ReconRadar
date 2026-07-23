@@ -64,6 +64,32 @@ def _reported(value: object) -> str:
     return _md(value)
 
 
+# A URL-safe sibling of ``_md``/``_reported`` (§5.8 fix): FR API URLs
+# legitimately contain "[]" in query params (e.g. conditions[type][]=NOTICE),
+# so the blanket escape above renders visible "\[" / "\]" that break
+# paste-and-resolve in both the packet body and the exported deliverable.
+# A clean absolute http(s) URL with no whitespace/angle-brackets/pipe is
+# rendered as a CommonMark autolink (``<https://...>``), which preserves
+# "[]()" literally and cannot itself carry an injection (autolinks cannot
+# contain whitespace or angle brackets). Anything else -- a hostile or
+# non-URL value -- still falls back to the fully-escaped ``_md`` rendering.
+def _md_url(value: object) -> str:
+    if value is None:
+        return ""
+    flat = " ".join(str(value).splitlines())
+    if flat.startswith(("http://", "https://")) and not any(
+        ch in flat for ch in (" ", "\t", "<", ">", "|")
+    ):
+        return f"<{flat}>"
+    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
+
+
+def _reported_url(value: object) -> str:
+    if value is None or not str(value).strip():
+        return "Not reported"
+    return _md_url(value)
+
+
 # D3: the heading AND the Section-ledger row (packet_export.py) are the
 # IDENTICAL string (audit correction -- a prior draft let the two drift).
 PL_ACTIVITY_SECTION_NAME = "Procurement List activity (Federal Register)"
@@ -137,7 +163,7 @@ def _record_lines(record: FRNoticeRecord) -> list[str]:
         f"  - Type: {_reported(record.notice_type)}; "
         f"Published: {_reported(record.publication_date)}; "
         f"Document number: {_reported(record.document_number)}",
-        f"  - {_reported(record.html_url)}",
+        f"  - {_reported_url(record.html_url)}",
     ]
 
 
@@ -159,7 +185,7 @@ def pl_activity_lines(result: PLNoticesResult) -> list[str]:
         lines.append(f"- {term_caveat}")
     lines.append(f"- {_count_line(result)}")
     lines.append(
-        f"- Source: {_reported(result.source_url)}; Retrieved at: "
+        f"- Source: {_reported_url(result.source_url)}; Retrieved at: "
         f"{_reported(result.retrieved_at)}."
     )
     lines.append("")

@@ -699,6 +699,45 @@ def test_packet_live_and_analyst_blocks_both_present() -> None:  # T22
     assert "## Contract Facts (analyst-entered)" in packet
 
 
+def test_packet_synthetic_example_contract_facts_renders_synthetic_heading() -> None:
+    # ADR-025 (mandatory honesty test): a synthetic_example=True record must
+    # render the SYNTHETIC-example heading/provenance, and its section must
+    # never contain "Assurance API_RETRIEVED".
+    record = _contract_facts(
+        synthetic_example=True,
+        source_url="bundled SYNTHETIC example (offline) -- not a live USAspending retrieval",
+    )
+    packet = build_opportunity_packet_markdown(
+        piid="SYNTH-A2-0001", county="Denver", state="CO", contract_facts=record
+    )
+    assert "## Contract Facts (SYNTHETIC example — offline, not a live retrieval)" in packet
+    assert "## Contract Facts (live — USAspending, cited)" not in packet
+    live_section = packet[
+        packet.index("## Contract Facts (SYNTHETIC example") : packet.index(
+            "## Contract Facts (analyst-entered)"
+        )
+    ]
+    assert "Assurance API_RETRIEVED" not in live_section
+    assert "NOT a live" in live_section
+
+
+def test_packet_non_synthetic_contract_facts_renders_live_heading_unchanged() -> None:
+    # Regression companion: a real (synthetic_example=False, the default)
+    # record must still render the exact original live heading/provenance.
+    record = _contract_facts()
+    assert record.synthetic_example is False
+    packet = build_opportunity_packet_markdown(
+        piid="47QRAA24D0012", county="Denver", state="CO", contract_facts=record
+    )
+    assert "## Contract Facts (live — USAspending, cited)" in packet
+    live_section = packet[
+        packet.index("## Contract Facts (live") : packet.index(
+            "## Contract Facts (analyst-entered)"
+        )
+    ]
+    assert "Assurance API_RETRIEVED" in live_section
+
+
 def test_packet_live_escapes_markdown_in_retrieved_values() -> None:  # T23
     packet = build_opportunity_packet_markdown(
         piid="X", county="Denver", state="CO",

@@ -1,11 +1,21 @@
 from __future__ import annotations
 
+import logging
+import os
+import re
 from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from tens_hq.connectors import AwardCandidate, ContractFactsRecord, ContractFactsResolution
+from tens_hq import bd_page as bd_page_module
+from tens_hq.case_store import CaseRepository
+from tens_hq.connectors import (
+    AwardCandidate,
+    ContractFactsRecord,
+    ContractFactsResolution,
+    GeographyRecord,
+)
 
 # The deterministic synthetic generator is CPU-heavy on this stack (tens of
 # seconds on Python 3.14 + pandas 3.0). app.py wraps it in load_demo_data via
@@ -90,6 +100,72 @@ def test_packet_pages_render_without_streamlit_exception():
 
     app.radio[0].set_value("Privacy & Governance").run()
     assert not app.exception, "Privacy & Governance"
+    # §5.10: the dead "Planning controls" (Scenario selectbox, Planning
+    # target slider) never changed anything on the Governance page and are
+    # removed -- in normal (non-pilot) mode, not just pilot mode.
+    assert not any(widget.label == "Scenario" for widget in app.selectbox)
+    assert not any(widget.label == "Planning target" for widget in app.slider)
+
+
+def test_governance_page_describes_only_shipped_capabilities():
+    # §5.1 / ADR-024: the Decision-boundaries block used to name capabilities
+    # that were deleted with ADR-016 (site views, source scores, organization
+    # scenarios, small-sample shrinkage, the start-stage gate) -- a
+    # self-contradiction two lines from the page's own no-score thesis. Assert
+    # the forbidden phrases are gone and the on-thesis bullet survives.
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("Privacy & Governance").run()
+    assert not app.exception
+
+    rendered = "\n".join(block.value for block in app.markdown).lower()
+    for forbidden in (
+        "site views",
+        "source scores",
+        "organization scenarios",
+        "small-sample shrinkage",
+        "start-stage gate",
+        "summed hours",
+    ):
+        assert forbidden not in rendered, forbidden
+
+    assert "never a feasibility score" in rendered
+    assert "bid/no-bid" in rendered
+
+
+def test_bd_page_lands_on_opportunity_packet_first():
+    # §15-#2 / §12.2 / §5.2 (Finding drift #3): the headline product used to
+    # sit behind an empty Cases landing tab. Reordering st.tabs so the packet
+    # is first makes it the surface Streamlit activates on first paint.
+    # `st.tabs` renders every tab body regardless of order in AppTest, so the
+    # render-present checks below are sanity only -- the two order assertions
+    # are the actual proof.
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    # Primary (behavioral order): there is exactly one st.tabs call in
+    # src/tens_hq, so app.tabs is that single group in declaration order.
+    assert app.tabs[0].label == "Opportunity Packet"
+
+    # Belt-and-suspenders (source-level, version-independent): pin the
+    # reorder directly against the st.tabs([...]) list literal.
+    source = Path(bd_page_module.__file__).read_text(encoding="utf-8")
+    match = re.search(r"st\.tabs\(\s*\[\s*\"([^\"]+)\"", source)
+    assert match is not None, "could not locate the st.tabs([...]) call in bd_page.py"
+    assert match.group(1) == "Opportunity Packet"
+
+    # Secondary (content still renders): packet subheader, R2a heading, and
+    # the no-score framing caption are all present somewhere on the page.
+    subheaders = "\n".join(block.value for block in app.subheader)
+    assert "Opportunity Packet" in subheaders
+    packet_markdown = "\n".join(block.value for block in app.markdown)
+    assert "## R2a determination-support map" in packet_markdown
+    captions = "\n".join(block.value for block in app.caption)
+    assert "never renders a score, ranking, or bid/no-bid recommendation" in captions
 
 
 def test_guided_demo_navigation_is_callback_safe_and_resumes_from_query_params():
@@ -540,6 +616,47 @@ def test_opportunity_packet_radar_handoff_drops_out_on_piid_retarget():
     assert "## Origin — Radar handoff (context, not evidence)" not in packet_after
 
 
+def test_opportunity_packet_offline_synthetic_example_facts_populate_the_flagship_moment():
+    # ADR-025 / §15-#3: following the guided demo offline (handoff sample ->
+    # Pull contract facts (live)) must reach a populated, clearly-SYNTHETIC
+    # Contract Facts + Eligibility Gate + Capture Window render with no red
+    # error, using only the bundled synthetic PIID -- no socket opened (the
+    # socket guard would fail this test if the offline branch fell through
+    # to a real network call).
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    def _ti(key):
+        return next(widget for widget in app.text_input if widget.key == key)
+
+    next(box for box in app.checkbox if box.key == "op_packet_handoff_use_sample").set_value(True)
+    app.run()
+    next(button for button in app.button if button.key == "op_packet_handoff_use").click().run()
+    assert not app.exception
+    assert _ti("op_packet_piid").value == "SYNTH-A2-0001"
+
+    next(button for button in app.button if button.key == "op_packet_facts_pull").click().run()
+    assert not app.exception
+
+    assert any(
+        "Loaded the bundled SYNTHETIC example contract facts" in getattr(msg, "value", "")
+        for msg in app.success
+    )
+
+    packet = "\n".join(block.value for block in app.markdown)
+    assert "## Contract Facts (SYNTHETIC example — offline, not a live retrieval)" in packet
+    assert "## Contract Facts (live — USAspending, cited)" not in packet
+    # Obligated and ceiling both appear, as distinct lines/values.
+    assert "$180,000.00" in packet
+    assert "$420,000.00" in packet
+    # The gate and capture window both render off the attached synthetic facts.
+    assert "## Eligibility gate (can the NPA prime?)" in packet
+    assert "## Capture window (estimated solicitation + R2a start-by band)" in packet
+
+
 def test_opportunity_packet_staffing_whatif_absent_without_baseline():
     # A6: the section stays absent until a baseline value is entered -- the
     # packet stays usable without it.
@@ -679,3 +796,118 @@ def test_pilot_mode_boots_with_packet_surface_only(monkeypatch):
     # case form's team selectbox) remain.
     assert not any(widget.label == "Scenario" for widget in app.selectbox)
     assert not any(button.key == "tour_next" for button in app.button)
+
+
+def test_scan_tab_offline_nib_npa_sample_checkbox_is_wired() -> None:
+    # ADR-026 / §15-#6 / §5.4: the tracker's NIB/NPA lane must be demonstrable
+    # offline. The Scan form only renders once a case exists (_case_select
+    # returns None otherwise), so a case is seeded directly against the
+    # session-scoped isolated ledger before the AppTest boots. This proves the
+    # checkbox is wired without depending on -- or asserting -- an empty
+    # ledger (a prior test in this session may already have seeded cases).
+    repository = CaseRepository(os.environ["TENS_HQ_DB_PATH"])
+    try:
+        repository.create_case("Denver NIB/NPA offline check", "Denver", "CO")
+    finally:
+        repository.close()
+
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    checkbox = next(box for box in app.checkbox if box.key == "scan_use_sample_nib_npa")
+    assert checkbox.label == "Use the bundled SYNTHETIC NIB/NPA example instead of an upload"
+    assert checkbox.value is False
+
+
+def test_acs_year_change_detaches_stale_geography(monkeypatch) -> None:
+    # §8 confirmed bug / §12.4 partial: README.md's "editing an input detaches
+    # any stale result built on it" invariant did not hold for the ACS vintage
+    # year -- the reuse guard matched on county+state only. Pull at 2022, then
+    # change the year to 2019 without re-pulling; the packet must fall back to
+    # the honest "Not yet retrieved" placeholder rather than keep showing the
+    # stale 2022 figure. Offline (no socket): pull_geography_context is
+    # monkeypatched, so the autouse socket guard would fail this test if the
+    # code path ever fell through to a real network call.
+    def fake_pull(county: str, state: str, *, year: int, **_kwargs: object) -> GeographyRecord:
+        return GeographyRecord(
+            county_name=f"{county.title()} County",
+            state_code=state,
+            state_fips="08",
+            county_fips="031",
+            total_population=100000,
+            with_disability=12000,
+            disability_percent=12.0,
+            acs_survey="ACS 5-Year",
+            acs_vintage_year=year,
+            source_url=f"https://api.census.gov/data/{year}/acs/acs5",
+            retrieved_at="2026-07-23T00:00:00Z",
+        )
+
+    monkeypatch.setattr("tens_hq.bd_page.pull_geography_context", fake_pull)
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    def _ti(key):
+        return next(widget for widget in app.text_input if widget.key == key)
+
+    def _ni(key):
+        return next(widget for widget in app.number_input if widget.key == key)
+
+    _ti("op_packet_county").set_value("Denver")
+    _ti("op_packet_state").set_value("CO")
+    _ni("op_packet_year").set_value(2022)
+    app.run()
+    next(button for button in app.button if button.key == "op_packet_pull").click().run()
+    assert not app.exception
+
+    packet = "\n".join(block.value for block in app.markdown)
+    assert "vintage 2022" in packet
+
+    _ni("op_packet_year").set_value(2019)
+    app.run()
+    assert not app.exception
+
+    packet = "\n".join(block.value for block in app.markdown)
+    assert "vintage 2022" not in packet
+    assert "Not yet retrieved." in packet
+
+
+def test_unexpected_contract_facts_error_is_logged_and_not_blamed_on_the_source(
+    monkeypatch, caplog
+) -> None:
+    # §15-#9 / §5.7: an unexpected internal error (anything other than the
+    # already-handled ConnectorError) must be logged server-side and must
+    # NOT tell the operator "the public source may be unavailable" -- that
+    # phrase mislabels a code bug as a network outage. Offline: the raised
+    # ValueError never reaches the network, so the autouse socket guard is
+    # not exercised either way.
+    def fake_pull(piid: str, **_kwargs: object):
+        raise ValueError("boom")
+
+    monkeypatch.setattr("tens_hq.bd_page.pull_contract_facts", fake_pull)
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    next(widget for widget in app.text_input if widget.key == "op_packet_piid").set_value(
+        "47QRAA24D0012"
+    )
+    app.run()
+    with caplog.at_level(logging.ERROR, logger="tens_hq.bd_page"):
+        next(button for button in app.button if button.key == "op_packet_facts_pull").click().run()
+    assert not app.exception
+
+    error_text = "\n".join(msg.value for msg in app.error)
+    assert "source may be unavailable" not in error_text
+    assert "logged" in error_text.lower()
+    assert any(
+        "contract-facts pull failed unexpectedly" in record.message for record in caplog.records
+    )

@@ -321,7 +321,8 @@ def _render_scan(repo: CaseRepository) -> None:
                 st.info("Retry key matched an earlier scan; no duplicate import was created.")
             else:
                 st.success(f"Scan succeeded: {result.record_count} normalized public rows.")
-            st.json(result.to_dict())
+            with st.expander("Scan detail (raw)", expanded=False):
+                st.json(result.to_dict())
 
     resources = repo.list_resources(case.case_id, current_only=True)
     if resources:

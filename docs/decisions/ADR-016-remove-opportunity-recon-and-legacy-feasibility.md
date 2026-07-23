@@ -71,3 +71,12 @@ apart. ADRs are append-only: prior decisions are annotated with an "Update
   evidence (following the Eligibility Gate / Contract Facts / Capture Window
   / Geography / R2b pattern on the Opportunity Packet), never as a
   re-introduced numeric score.
+
+> **Update 2026-07-23:** `metrics.py` (and with it `metrics.opportunity_readiness`
+> / `ready_to_pursue_score`, referenced above) was subsequently removed from
+> `src` entirely, and the navigation was reduced further, to **two** pages
+> (`BD Feasibility`, `Privacy & Governance`) — not the "ten pages (was eleven)"
+> stated above, which described an intermediate state on the way to the
+> current two-page nav. The body above is retained as the original decision
+> record; this note exists so a reader cross-checking the current tree against
+> this ADR's Consequences section isn't left confused by a stale page count.

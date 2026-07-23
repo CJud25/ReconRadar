@@ -115,7 +115,11 @@ The same page's other tabs are the repeatable evidence workflow around the packe
 NIB or SourceAmerica workbook, then separately the AbilityOne Services workbook —
 one upload normally cannot satisfy both evidence gates), **Verification**, and
 **Assessment** — which reports evidence *readiness*, never a score. Case lifecycle
-states are distinct from evidence-readiness labels by design.
+states are distinct from evidence-readiness labels by design. **No network? Tick
+"Use the bundled SYNTHETIC NIB/NPA example instead of an upload" on the Scan tab
+(ADR-026) to run the NIB/NPA lane offline** — the same bundled Denver/Aurora, CO
+rows the packet's PL cross-reference sample already uses, so a case can be walked
+all the way to Validated with no upload and no network.
 
 ## Act 5 (optional) — Governance close (2 minutes)
 

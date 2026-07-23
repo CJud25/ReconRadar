@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from tens_hq import bd_page as bd_page_module
+from tens_hq.case_store import CaseRepository
 from tens_hq.connectors import AwardCandidate, ContractFactsRecord, ContractFactsResolution
 
 # The deterministic synthetic generator is CPU-heavy on this stack (tens of
@@ -788,3 +790,27 @@ def test_pilot_mode_boots_with_packet_surface_only(monkeypatch):
     # case form's team selectbox) remain.
     assert not any(widget.label == "Scenario" for widget in app.selectbox)
     assert not any(button.key == "tour_next" for button in app.button)
+
+
+def test_scan_tab_offline_nib_npa_sample_checkbox_is_wired() -> None:
+    # ADR-026 / §15-#6 / §5.4: the tracker's NIB/NPA lane must be demonstrable
+    # offline. The Scan form only renders once a case exists (_case_select
+    # returns None otherwise), so a case is seeded directly against the
+    # session-scoped isolated ledger before the AppTest boots. This proves the
+    # checkbox is wired without depending on -- or asserting -- an empty
+    # ledger (a prior test in this session may already have seeded cases).
+    repository = CaseRepository(os.environ["TENS_HQ_DB_PATH"])
+    try:
+        repository.create_case("Denver NIB/NPA offline check", "Denver", "CO")
+    finally:
+        repository.close()
+
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    checkbox = next(box for box in app.checkbox if box.key == "scan_use_sample_nib_npa")
+    assert checkbox.label == "Use the bundled SYNTHETIC NIB/NPA example instead of an upload"
+    assert checkbox.value is False

@@ -782,3 +782,38 @@ def test_cases_frame_drops_all_empty_optional_columns(tmp_path) -> None:
         assert columns == ["title", "location", "state", "team", "role", "case_id"]
     finally:
         repository.close()
+
+
+def test_bundled_sample_nib_npa_workbook_parses_offline() -> None:
+    # ADR-026 / §15-#6 / §5.4: the bundled data/samples/sample_nib_npa.xlsx must
+    # satisfy the real NIB_NPA schema so a stranger can drive the tracker's
+    # Scan -> Validated readiness lifecycle offline. This is the primary proof
+    # -- it parses the actual committed artifact, not an in-test fixture.
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "data" / "samples" / "sample_nib_npa.xlsx"
+    data = path.read_bytes()
+    result = parse_workbook(SourceKind.NIB_NPA, data)
+
+    assert result.record_count == 3
+    assert result.rejected_rows == 0
+    assert result.unparsed_rows == 0
+    values = [dict(record.values) for record in result.records]
+    assert {
+        "agency_name": "Mile High Community Workshop",
+        "city": "Denver",
+        "state": "CO",
+        "zip_code": "80202",
+    } in values
+    assert {
+        "agency_name": "Front Range Ability Partners",
+        "city": "Denver",
+        "state": "CO",
+        "zip_code": "80204",
+    } in values
+    assert {
+        "agency_name": "Rocky Mountain Vocational Services",
+        "city": "Aurora",
+        "state": "CO",
+        "zip_code": "80010",
+    } in values

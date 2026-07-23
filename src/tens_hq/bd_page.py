@@ -26,6 +26,7 @@ from .connectors import (
     DEFAULT_ACS_YEAR,
     NIBNPAConnector,
     SYNTHETIC_EXAMPLE_PIID,
+    SourceKind,
     WORKBOOK_SOURCE_KINDS,
     load_synthetic_example_facts,
     pull_contract_facts,
@@ -58,6 +59,13 @@ def _sample_radar_handoff_bytes() -> bytes:
     """Read the bundled SYNTHETIC example Radar handoff JSON (offline)."""
 
     path = Path(__file__).resolve().parents[2] / "data" / "samples" / "sample_radar_handoff.json"
+    return path.read_bytes()
+
+
+def _sample_nib_npa_bytes() -> bytes:
+    """Read the bundled SYNTHETIC example NIB/NPA directory workbook (offline)."""
+
+    path = Path(__file__).resolve().parents[2] / "data" / "samples" / "sample_nib_npa.xlsx"
     return path.read_bytes()
 
 
@@ -303,22 +311,39 @@ def _render_scan(repo: CaseRepository) -> None:
     with st.form("public_scan_form"):
         source = st.selectbox("Approved source", [kind.value for kind in WORKBOOK_SOURCE_KINDS])
         workbook = st.file_uploader("Official workbook export (.xlsx)", type=["xlsx"])
+        use_sample_nib_npa = st.checkbox(
+            "Use the bundled SYNTHETIC NIB/NPA example instead of an upload",
+            key="scan_use_sample_nib_npa",
+            value=False,
+        )
         idempotency_key = st.text_input("Retry key (optional)", placeholder="capture-2026-07-18-denver-nib")
         actor_role = st.selectbox("Analyst role", ["Analyst", "Reviewer", "Compliance Reviewer"])
         retrieved_at = st.text_input("Source retrieval time (UTC; leave blank if unknown)", placeholder="2026-07-18T14:30:00Z")
         attested = st.checkbox("I attest this is an approved public AbilityOne workbook export", value=False)
         submitted = st.form_submit_button("Run local scan", type="primary")
     if submitted:
-        if workbook is None:
+        if use_sample_nib_npa:
+            scan_source = SourceKind.NIB_NPA.value
+            scan_bytes: bytes | None = _sample_nib_npa_bytes()
+            scan_filename: str | None = "sample_nib_npa.xlsx"
+        elif workbook is not None:
+            scan_source = source
+            scan_bytes = workbook.getvalue()
+            scan_filename = workbook.name
+        else:
+            scan_source = source
+            scan_bytes = None
+            scan_filename = None
+        if scan_bytes is None:
             st.warning("Choose an approved workbook before running the scan.")
         elif not attested:
             st.warning("Confirm the public-source attestation before running a scan.")
         else:
             result = WorkbookScanner(repo).run_scan(
                 case.case_id,
-                source,
-                workbook.getvalue(),
-                workbook.name,
+                scan_source,
+                scan_bytes,
+                scan_filename,
                 idempotency_key=idempotency_key or None,
                 actor_role=actor_role,
                 retrieved_at=retrieved_at.strip() or None,

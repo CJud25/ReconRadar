@@ -728,6 +728,17 @@ def _render_opportunity_packet() -> None:
             except ConnectorError as exc:
                 st.session_state.pop("op_packet_facts_result", None)
                 st.error(f"Could not retrieve contract facts: {exc.public_message}")
+                if exc.code in {"AWARD_NOT_FOUND", "UPSTREAM_UNAVAILABLE"}:
+                    # §5.3 / QW8: reconcile the offline/synthetic-PIID failure at
+                    # the point of failure instead of only in operator notes --
+                    # both codes cover the same reader intent ("why didn't my
+                    # paste resolve?"): a made-up PIID that a live search cannot
+                    # find, or a live search that cannot run at all offline.
+                    st.caption(
+                        "Offline or a synthetic example PIID cannot resolve live facts -- "
+                        "use the bundled SYNTHETIC example (below, at Origin) for an offline "
+                        "walkthrough, or a real PIID with a network connection."
+                    )
             except Exception:
                 st.session_state.pop("op_packet_facts_result", None)
                 st.error(

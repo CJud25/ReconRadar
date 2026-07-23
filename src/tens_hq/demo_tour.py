@@ -1,12 +1,13 @@
 """Immutable content model for ReconRadar's seven-beat guided demonstration.
 
-The tour walks the packet spine of ``docs/DEMO_SCRIPT.md``. It navigates
-PAGES; it cannot open a Streamlit tab, so beats that live on the Opportunity
-Packet tab tell the operator to open it. The governance close covers the
-synthetic-data validation and public-evidence boundary. Every quoted widget
-label is verbatim from ``bd_page.py`` (locked by a test), and every sentence
-keeps the packet's own honesty rules: prefills are never verified evidence,
-leads are never verdicts, indicators are never determinations.
+The tour walks the packet spine of ``docs/DEMO_SCRIPT.md``. The BD page now
+opens on the Opportunity Packet tab (it is tab 0, the Streamlit-activated
+landing tab), so every packet beat reads the already-open packet — the tour
+only navigates PAGES (it cannot open a Streamlit tab), and it uses that for
+the single governance close at the end. Every quoted widget label is
+verbatim from ``bd_page.py`` (locked by a test), and every sentence keeps
+the packet's own honesty rules: prefills are never verified evidence, leads
+are never verdicts, indicators are never determinations.
 """
 
 from __future__ import annotations
@@ -31,10 +32,10 @@ DEMO_TOUR: Final[tuple[DemoBeat, ...]] = (
         target_page="BD Feasibility",
         highlight="the no-score framing caption",
         sentence=(
-            "Open the Opportunity Packet tab (rightmost) and read the framing "
-            "caption aloud: the packet never renders a score, ranking, or "
-            "bid/no-bid recommendation. The rest of the tour is that "
-            "sentence's proof."
+            "The Opportunity Packet is the tab already open — no tab click "
+            "needed. Read the framing caption aloud: the packet never renders "
+            "a score, ranking, or bid/no-bid recommendation. The rest of the "
+            "tour is that sentence's proof."
         ),
     ),
     DemoBeat(

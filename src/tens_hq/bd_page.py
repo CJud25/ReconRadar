@@ -1291,9 +1291,11 @@ def render_public_bd_page(data: Any, target: float, scenario: str) -> None:
         st.error("The local evidence ledger could not be opened. Check the configured TENS_HQ_DB_PATH and filesystem permissions.")
         return
 
-    cases_tab, new_tab, scan_tab, verify_tab, assess_tab, packet_tab = st.tabs(
-        ["Cases", "New Case", "Scan & Evidence", "Verification", "Assessment", "Opportunity Packet"]
+    packet_tab, cases_tab, new_tab, scan_tab, verify_tab, assess_tab = st.tabs(
+        ["Opportunity Packet", "Cases", "New Case", "Scan & Evidence", "Verification", "Assessment"]
     )
+    with packet_tab:
+        _render_opportunity_packet()
     with cases_tab:
         _render_cases(repo)
     with new_tab:
@@ -1304,5 +1306,3 @@ def render_public_bd_page(data: Any, target: float, scenario: str) -> None:
         _render_verification(repo)
     with assess_tab:
         _render_assessment(repo)
-    with packet_tab:
-        _render_opportunity_packet()

@@ -9,8 +9,9 @@ Timing: about 12 minutes for Acts 1–3; Acts 4–5 add about 5 more. The packet
 fully offline with the bundled SYNTHETIC examples; the live pulls need internet.
 
 > The sidebar's "▶ Guided demo" walks this script's spine — six packet beats,
-> then the governance close — and can pace the walkthrough. It navigates pages
-> only: opening the **Opportunity Packet** tab on each beat is still your click.
+> then the governance close — and can pace the walkthrough. The BD page now
+> lands on the **Opportunity Packet** tab, so the packet beats need no manual
+> tab click; the tour still switches pages for the governance close.
 
 ## Act 1 — Setup (1 minute)
 
@@ -19,9 +20,10 @@ fully offline with the bundled SYNTHETIC examples; the live pulls need internet.
    DIRECTORY DATA ONLY* — and, at the top of the page body, the warning line:
    public directory evidence is discovery evidence only; the scanner never infers
    capacity, candidate supply, a relationship, or an acquisition outcome.
-3. Open the **Opportunity Packet** tab (rightmost). Read the framing caption aloud:
-   the packet "never renders a score, ranking, or bid/no-bid recommendation."
-   That sentence is the product thesis; the next ten minutes are its proof.
+3. The page lands on the **Opportunity Packet** tab — no tab click needed. Read
+   the framing caption aloud: the packet "never renders a score, ranking, or
+   bid/no-bid recommendation." That sentence is the product thesis; the next
+   ten minutes are its proof.
 
 ## Act 2 — Assemble the packet (7 minutes)
 
@@ -152,9 +154,10 @@ to explicit human review.
   result rather than showing it against the wrong contract — expected behavior, not
   a bug.
 - **In-app guided tour:** the sidebar "▶ Guided demo" follows this script's
-  sequence (packet-first, governance close last). It changes the page, never the
-  tab — open the Opportunity Packet tab yourself — and its beat captions quote
-  the real widget labels, locked by a test against the page source.
+  sequence (packet-first, governance close last). The BD page now lands on the
+  Opportunity Packet tab, so the packet beats need no manual tab click; the
+  tour still switches pages for the governance close, and its beat captions
+  quote the real widget labels, locked by a test against the page source.
 - **Counsel-gated content:** the C3/C4 claims (named with their citations in
   ADR-020 and the counsel packet) are with counsel and are excluded from the
   packet's copy. Guard tests lock the whole rendered packet, the full export,

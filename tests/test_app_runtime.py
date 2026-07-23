@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from tens_hq import bd_page as bd_page_module
 from tens_hq.connectors import AwardCandidate, ContractFactsRecord, ContractFactsResolution
 
 # The deterministic synthetic generator is CPU-heavy on this stack (tens of
@@ -122,6 +124,40 @@ def test_governance_page_describes_only_shipped_capabilities():
 
     assert "never a feasibility score" in rendered
     assert "bid/no-bid" in rendered
+
+
+def test_bd_page_lands_on_opportunity_packet_first():
+    # §15-#2 / §12.2 / §5.2 (Finding drift #3): the headline product used to
+    # sit behind an empty Cases landing tab. Reordering st.tabs so the packet
+    # is first makes it the surface Streamlit activates on first paint.
+    # `st.tabs` renders every tab body regardless of order in AppTest, so the
+    # render-present checks below are sanity only -- the two order assertions
+    # are the actual proof.
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+    app.radio[0].set_value("BD Feasibility").run()
+    assert not app.exception
+
+    # Primary (behavioral order): there is exactly one st.tabs call in
+    # src/tens_hq, so app.tabs is that single group in declaration order.
+    assert app.tabs[0].label == "Opportunity Packet"
+
+    # Belt-and-suspenders (source-level, version-independent): pin the
+    # reorder directly against the st.tabs([...]) list literal.
+    source = Path(bd_page_module.__file__).read_text(encoding="utf-8")
+    match = re.search(r"st\.tabs\(\s*\[\s*\"([^\"]+)\"", source)
+    assert match is not None, "could not locate the st.tabs([...]) call in bd_page.py"
+    assert match.group(1) == "Opportunity Packet"
+
+    # Secondary (content still renders): packet subheader, R2a heading, and
+    # the no-score framing caption are all present somewhere on the page.
+    subheaders = "\n".join(block.value for block in app.subheader)
+    assert "Opportunity Packet" in subheaders
+    packet_markdown = "\n".join(block.value for block in app.markdown)
+    assert "## R2a determination-support map" in packet_markdown
+    captions = "\n".join(block.value for block in app.caption)
+    assert "never renders a score, ranking, or bid/no-bid recommendation" in captions
 
 
 def test_guided_demo_navigation_is_callback_safe_and_resumes_from_query_params():

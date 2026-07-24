@@ -93,6 +93,24 @@ evidence attaches. This is the operational version of `DEMO_SCRIPT.md` Act 2:
 10. **Export**: `Export Opportunity Packet (Markdown)`. File the download
     with the case; it carries the Section ledger (honest absences included)
     and the Source manifest.
+11. **Gate decision (EDGE)**: after you file the export, log your call. Append one
+    `decision` line to `data/runtime/edge/gate_decisions.jsonl` using
+    `docs/edge/gate-decision-log.template.md` — the call (`pursue`/`pass`/`watch`), your
+    decision-time confidence (`p_win` as a decile, *if pursued*), the factors that drove
+    it (tied to the packet's own sections), and a one-line rationale. Point the record at
+    the export you just filed (`packet_export_filename`). The log is append-only: never
+    edit a line; to revise, append a new one. Later, when you learn how the opportunity
+    resolved, append an `outcome` line. This is the packet's downstream memory: the packet
+    equips the call, EDGE records it so we can later check whether our confidence was
+    honest — it never changes the packet and never scores a person.
+
+### The decision log accrues into a corpus
+Each opportunity adds one `decision` line (and later one `outcome` line) to the same
+append-only file. Across the pilot's real opportunities the file becomes the EDGE
+corpus. No calibration is computed yet — corpus before app. Once enough decisions
+resolve, `docs/edge/GATE_DECISION_LOG.md` §6 specifies the aggregate, opt-in calibration
+read (reliability curve, Brier score, factor-signal) that the corpus will support. At
+pilot scale the honest output is "directional only — load more decisions," by design.
 
 ## Failure modes (all deliberate)
 
@@ -111,6 +129,11 @@ evidence attaches. This is the operational version of `DEMO_SCRIPT.md` Act 2:
   provenance only.
 - Counsel-gated C3/C4 content stays out of the packet, the export, and the
   operator script (test-enforced). Do not ad-lib it.
+- The **EDGE gate-decision log** (`data/runtime/edge/gate_decisions.jsonl`) records the
+  analyst's own pursue/pass/watch call *after* the packet — it is internal, gitignored,
+  and non-public (same posture as the SQLite ledger). It never joins to a person, names a
+  decider only by an opt-in team alias for the decider's own call, and never feeds anything
+  back into the packet. See `docs/edge/GATE_DECISION_LOG.md` for the schema and governance.
 
 ## Success criteria — DRAFT, owner sign-off required
 
@@ -127,12 +150,16 @@ the pilot starts. Targets are placeholders, not commitments:
    run is the reference example).
 4. **Analyst time**: time per packet recorded (suggest: target under 30
    minutes once familiar).
-5. **Decision usefulness**: for each packet, the analyst records whether it
-   changed or confirmed a next action (pursue teaming conversation, CNA
-   coordination, drop) — the packet's job is equipping that call, not making
-   it.
+5. **Decision usefulness**: for each packet, the analyst records whether it changed or
+   confirmed a next action **as an EDGE `decision` line** (pursue / pass / watch, with
+   decision-time confidence and the factors behind it) — the packet's job is equipping
+   that call, not making it.
 6. **Zero overclaim incidents**: no packet line quoted onward as a claim the
    packet does not support (the export's own caveats travel with it).
+7. **Decision-log completeness**: every filed packet has a matching EDGE `decision` line
+   that references its export, with a decision-time `p_win` and at least one factor —
+   the corpus seed for a future calibration read. (Calibration itself is not a pilot
+   success criterion; the corpus is too small to read honestly yet.)
 
 ## Reference
 

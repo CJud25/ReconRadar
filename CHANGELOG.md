@@ -13,6 +13,30 @@
 
 - The bundled synthetic PIID resolves into honestly-labeled, offline SYNTHETIC-example Contract Facts (never `API_RETRIEVED`, never a live award URL), so the offline guided demo reaches a populated flagship moment with no red error (ADR-025).
 - A bundled synthetic NIB/NPA workbook sample and an in-app affordance to scan it offline.
+- EDGE gate-decision-log kit ("Evidence-Driven Gate Evaluation," the capture
+  lifecycle's "learn" stage): a gate-decision log schema, capture template,
+  worked example corpus, and future-calibration-app spec so a corpus of the
+  team's own pursue/pass/watch calls accrues -- corpus before app, no
+  calibration UI ships (ADR-027). New append-only, two-record-type (`decision` +
+  `outcome`) JSONL schema (`edge/v1`) captures decision-time confidence
+  (`p_win` as a decile, plus a `basis` band) and controlled-vocabulary
+  factors grounded in the packet's own eleven sections (plus four
+  honestly-external capture factors public data cannot see), keyed to
+  calibration not attribution: a decider may be named only by an opt-in
+  controlled TEAM alias, self-recorded, and never segmented on (no
+  leaderboard, structurally). EDGE stays external to the Opportunity
+  Packet -- nothing it captures feeds back into the packet, and a new
+  branch-independent source sweep (`tests/test_edge_boundary.py`) proves no
+  `src/tens_hq` module references it, alongside an extension of the
+  existing no-score guard to the fully-populated packet. The pilot runbook
+  gains a new per-opportunity step 11 ("Gate decision (EDGE)"), a
+  corpus-accrual note, and a Governance-boundaries bullet;
+  `docs/PRIVACY_AND_GOVERNANCE.md` discloses the corpus's internal,
+  non-public, gitignored `data/runtime/edge/` location alongside the
+  existing SQLite-ledger disclosure. New
+  `docs/decisions/ADR-027-edge-gate-decision-log.md`,
+  `docs/edge/GATE_DECISION_LOG.md`, `docs/edge/gate-decision-log.template.md`,
+  `docs/edge/gate_decisions.example.jsonl`.
 
 ## [1.0.0] - 2026-07-22
 

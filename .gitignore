@@ -11,3 +11,12 @@ data/public_cache/
 .testdeps/
 .ai/
 .test-tmp/
+
+# Dev-process artifacts: internal working docs from building this repo,
+# never published. ReconRadar is the source of truth (ADR-028); these stay
+# local/gitignored rather than shipped, same posture as the EDGE runtime
+# corpus above (data/runtime/).
+CLAUDE.md
+AGENTS.md
+docs/handoffs/
+docs/PRODUCT_BLUEPRINT.md

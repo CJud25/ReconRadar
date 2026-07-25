@@ -12,6 +12,48 @@ Nothing in this app renders a score, ranking, PWin, or bid/no-bid recommendation
 and nothing here is a suitability determination — the Commission determines
 suitability.
 
+## What you get
+
+One expiring contract in; this document out. Below is a byte-verbatim excerpt of
+[`docs/examples/example-packet.md`](docs/examples/example-packet.md) — the real, unedited
+output of the export path, generated offline from the repo's bundled SYNTHETIC samples by
+`py scripts/generate_example_packet.py`. Nothing in the packet was typed by hand; the
+hand-written preamble at the top of that file is the only exception, and it says so.
+
+**Section ledger** — every section, included or honestly absent, with the reason:
+
+| Section | Included | Basis |
+|---|---|---|
+| Origin \(Radar handoff\) | Yes | A Radar handoff snapshot is attached and its PIID matches this packet's current PIID. |
+| Eligibility gate | Yes | Gate fed by the LIVE retrieved set-aside value \(USAspending FPDS type_set_aside\), which supersedes any analyst-typed value once live Contract Facts are attached. |
+| Contract Facts \(SYNTHETIC example\) | Yes | Bundled SYNTHETIC example facts attached — offline, not a real USAspending API retrieval. |
+| Contract Facts \(analyst-entered\) | Yes | Always rendered from the analyst-pasted PIID and place of performance, independent of any other evidence attached. |
+| Capture window | Yes | Computed from the attached live Contract Facts pull's potential period end date. |
+| Incumbent & teaming leads / PL-impact | Yes | Evidence attached: facts + directory. |
+| Staffing what-if | Yes | An analyst-entered staffing baseline was attached to this render. |
+| Geography \(ACS\) | Yes | Section rendered as a placeholder -- no ACS context retrieved \(not yet pulled\). |
+| PL cross-reference \(R2b\) | Yes | A PL workbook was cross-referenced against this render's worksite. |
+| Procurement List activity \(Federal Register\) | Not included | No Federal Register pull attached. |
+| R2a determination-support map | Yes | Always rendered -- routes whatever evidence is currently attached above onto the four suitability criteria of 41 CFR 51-2.4\(a\). |
+
+**Source manifest** — every attached source, its reference, retrieval time, and assurance:
+
+| Source | Reference | Retrieved at | Assurance | Notes |
+|---|---|---|---|---|
+| Radar handoff \(analyst upload\) | sample_radar_handoff.json \(SYNTHETIC example\) | 2026-07-15 | USER_ATTESTED | The handoff's claimed snapshot retrieval time; not independently verified. Live Contract Facts, where attached, supersede this claim. SYNTHETIC example handoff — not real Radar output. |
+| Contract Facts \(SYNTHETIC example, offline\) | bundled SYNTHETIC example \(offline\) -- not a live USAspending retrieval | 2026-07-22T12:00:00+00:00 | SYNTHETIC_EXAMPLE | SYNTHETIC example — not real USAspending data. |
+| AbilityOne NPA directory \(analyst upload\) | sample_nib_npa.xlsx \(SYNTHETIC example\) | Not supplied \(analyst attestation absent\) | USER_ATTESTED |  |
+| Staffing what-if inputs \(analyst-entered\) | HOURS mode entry | Not supplied \(analyst attestation absent\) | USER_ATTESTED |  |
+| Procurement List cross-reference workbook \(R2b\) | sample_pl_services.xlsx \(SYNTHETIC example\) | 2026-07-24 | USER_ATTESTED | SYNTHETIC example workbook — not real Procurement List data |
+
+The full file adds the stamped header, the attestation disclaimers, and the packet body
+those two tables describe.
+
+Two rows in that Section ledger — Eligibility gate and Capture window — say "LIVE" and
+"live" of what was actually the bundled synthetic offline sample. That is a real
+labeling defect, not a typo, and it is disclosed, enumerated, and pinned to its source
+lines at the top of [`docs/examples/example-packet.md`](docs/examples/example-packet.md).
+
 ## The Opportunity Packet
 
 Work one page, top to bottom; the packet re-renders as evidence attaches:
@@ -84,8 +126,38 @@ exports only — no person-level data. The bundled demo data is synthetic and
 validated on every test run. Counsel-gated regulatory claims are excluded from
 every rendered surface, test-enforced.
 
-563 tests run in CI, including dedicated guards for markdown-injection,
-counsel-gated vocabulary, and the no-score rule.
+The suite is 585 tests (`py -m pytest` → `585 passed`), including dedicated
+guards for markdown-injection, counsel-gated vocabulary, and the no-score rule.
+CI runs that suite plus `ruff check .` and `scripts/validate_demo_data.py` on
+Python 3.11 and 3.12, on every push and pull request.
+
+## How this was built
+
+Chris Judkins specified this system, decomposed it into gated slices, ran the
+adversarial review passes over them, and wrote the fix commits; AI agents wrote
+most of the line-level code. The history says so plainly — every commit here
+except the two GitHub merge commits carries a `Co-Authored-By: Claude ...`
+trailer.
+
+The gate every slice had to clear was `python -m pytest -q` and
+`python scripts/validate_demo_data.py`, run on Python 3.11. CI has grown since:
+`.github/workflows/ci.yml` now also runs `ruff check .`, adds a Python 3.12 leg,
+and builds and smoke-boots the container on every push and pull request. Both
+of those last two arrived on 2026-07-23, after the slice work — so the pipeline
+a reader sees today is stricter than the one the slices were held to.
+
+The finds belong to the review passes, and the record credits them there.
+ADR-017 notes that adversarial verification corrected an earlier draft of the
+incumbent-leads band design, which had treated a sole-source designation and
+its entailed offers count as two corroborating signals. ADR-015's second
+2026-07-21 Update records an adversarial-verification fix pass applied hours
+after the Decision it supersedes was written. In this repo's history,
+`f50a421` is a review-fix commit sitting directly on top of the release it
+corrects.
+
+The judgment calls — where the slice boundaries fell, what to refuse to
+compute, what to delete, and the decision to run an adversarial pass at all —
+are the part worth evaluating.
 
 ## License
 

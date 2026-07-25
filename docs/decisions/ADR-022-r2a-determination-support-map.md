@@ -198,7 +198,7 @@ brief never asked for and the evidence does not support.
   both are hoisted to `None` defaults before it, so they are always
   defined by the time the R2a map is computed at the end of
   `build_opportunity_packet_markdown`, whether or not that branch ran.
-- Automated coverage: 27 tests in `r2a_map.py`'s own suite (fixed order,
+- Automated coverage: a dedicated suite for `r2a_map.py` (fixed order,
   per-criterion absence/presence, both routing rails, the fixed epilogue,
   the conditional Capture Window citation, a hard C3/C4-absence guard
   across every input combination, and a no-table guard on the capability

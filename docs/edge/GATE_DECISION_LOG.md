@@ -48,8 +48,8 @@ surface that a CSV/Excel export would (a leading `=`/`+`/`-`/`@` in a JSON
 string value is inert -- it is not a spreadsheet formula), and is trivially
 parseable by the future read line-by-line. (The packet export guards a
 *different* risk -- Markdown **structural** injection -- via `_md`/`_cell`
-in `packet_export.py` (~lines 589/606: backslash-escape Markdown
-metacharacters, flatten line breaks, and swap `|`->`/` in table cells). It
+in `packet_export.py` (backslash-escape Markdown metacharacters, flatten
+line breaks, and swap `|`->`/` in table cells). It
 emits no CSV and has **no** formula guard, because it exposes no CSV
 surface to protect; EDGE's JSONL exposes none either.) A SQLite table would
 re-introduce the "build an app to write it" problem this slice defers --

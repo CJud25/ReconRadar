@@ -66,10 +66,45 @@ offline from the repository's own bundled SYNTHETIC samples by
 `scripts/generate_example_packet.py`. Every value below came out of the code;
 none of it was typed by hand.
 
-Everything in it is SYNTHETIC and labeled as such. The ACS geography, subaward,
-and Federal Register sections are absent because those are live pulls that this
-offline run did not make — the Section ledger at the bottom says so, by name,
-with the reason. That is the point of the ledger.
+Every input to this run is SYNTHETIC and no live pull was made. Contract facts
+came from the bundled offline sample; the packet's other three live sources —
+ACS geography, USAspending subawards, Federal Register notices — are simply
+unattached. The document discloses those three absences in three different
+ways, so read the Section ledger and the section bodies together; they do not
+say the same thing:
+
+- **Procurement List activity (Federal Register)** is the only one the Section
+  ledger marks `Not included`, with the basis "No Federal Register pull
+  attached."
+- **Geography (ACS)** still renders as a section, and the ledger marks it
+  `Yes`, with the basis "Section rendered as a placeholder -- no ACS context
+  retrieved (not yet pulled)". The section body reads "Not yet retrieved."
+- **Subawards** get no ledger row of their own at all. Their absence is carried
+  as prose inside the Incumbent & teaming leads / PL-impact context section:
+  "No subaward records were retrieved for this award..."
+
+**Known defect, disclosed rather than hidden.** Four provenance labels below
+describe this offline synthetic run as if it were live API data:
+
+1. Origin (Radar handoff) section: "Live USAspending Contract Facts are
+   attached to this packet".
+2. Incumbent & teaming leads / PL-impact context section: "Provenance
+   assurance: API_RETRIEVED".
+3. Section ledger, Eligibility gate row: "Gate fed by the LIVE retrieved
+   set-aside value ...".
+4. Section ledger, Capture window row: "Computed from the attached live
+   Contract Facts pull's potential period end date."
+
+All four branch on whether contract facts are attached and never on whether
+those facts are synthetic: `src/tens_hq/opportunity_packet.py:360`,
+`src/tens_hq/incumbent_leads.py:468` and `:535`, and
+`src/tens_hq/packet_export.py:147-154` and `:202-208`. The check they are
+missing is already written twice elsewhere, both under ADR-025:
+`packet_export.py:170` (`_contract_facts_live_row`) and `packet_export.py:438`
+(the Source manifest row). That is why the Contract Facts ledger row and its
+`SYNTHETIC_EXAMPLE` manifest assurance ARE correct here. Fixing the four sites
+above is a product-behavior change, not a documentation change, and is not made
+here.
 
 ---
 

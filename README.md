@@ -48,6 +48,11 @@ output of the export path, generated offline from the repo's bundled SYNTHETIC s
 The full file adds the stamped header, the attestation disclaimers, and the packet body
 those two tables describe.
 
+Two rows in that Section ledger — Eligibility gate and Capture window — say "LIVE" and
+"live" of what was actually the bundled synthetic offline sample. That is a real
+labeling defect, not a typo, and it is disclosed, enumerated, and pinned to its source
+lines at the top of [`docs/examples/example-packet.md`](docs/examples/example-packet.md).
+
 ## The Opportunity Packet
 
 Work one page, top to bottom; the packet re-renders as evidence attaches:

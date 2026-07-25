@@ -120,9 +120,9 @@ exports only — no person-level data. The bundled demo data is synthetic and
 validated on every test run. Counsel-gated regulatory claims are excluded from
 every rendered surface, test-enforced.
 
-The suite is 585 tests as of this commit (`py -m pytest`), including dedicated
+The suite is 585 tests (`py -m pytest` → `585 passed`), including dedicated
 guards for markdown-injection, counsel-gated vocabulary, and the no-score rule.
-CI runs that suite plus `ruff check .` and `py scripts/validate_demo_data.py` on
+CI runs that suite plus `ruff check .` and `scripts/validate_demo_data.py` on
 Python 3.11 and 3.12, on every push and pull request.
 
 ## How this was built
@@ -132,9 +132,10 @@ verified each one; AI agents wrote most of the line-level code. The commit
 history shows it — most commits here carry a `Co-Authored-By: Claude` trailer.
 
 The loop was the same every slice: nothing merged until the repo's own gate was
-green (`py -m pytest` and `ruff check .`, both run in CI on every push and pull
-request), and each slice went through an independent adversarial review before
-merge. ADR-015, ADR-017 and ADR-018 record what those reviews changed.
+green — `py -m pytest` and `ruff check .`, both of which CI also runs on every
+push and pull request — and each slice went through an independent adversarial
+review before merge. ADR-015, ADR-017 and ADR-018 record what those reviews
+changed.
 
 One catch the model missed. In the incumbent-leads slice, the generated design
 treated "sole-source award" and "one or zero offers received" as two signals

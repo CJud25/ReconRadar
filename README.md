@@ -12,6 +12,42 @@ Nothing in this app renders a score, ranking, PWin, or bid/no-bid recommendation
 and nothing here is a suitability determination — the Commission determines
 suitability.
 
+## What you get
+
+One expiring contract in; this document out. Below is a byte-verbatim excerpt of
+[`docs/examples/example-packet.md`](docs/examples/example-packet.md) — the real, unedited
+output of the export path, generated offline from the repo's bundled SYNTHETIC samples by
+`py scripts/generate_example_packet.py`. Nothing in it was typed by hand.
+
+**Section ledger** — every section, included or honestly absent, with the reason:
+
+| Section | Included | Basis |
+|---|---|---|
+| Origin \(Radar handoff\) | Yes | A Radar handoff snapshot is attached and its PIID matches this packet's current PIID. |
+| Eligibility gate | Yes | Gate fed by the LIVE retrieved set-aside value \(USAspending FPDS type_set_aside\), which supersedes any analyst-typed value once live Contract Facts are attached. |
+| Contract Facts \(SYNTHETIC example\) | Yes | Bundled SYNTHETIC example facts attached — offline, not a real USAspending API retrieval. |
+| Contract Facts \(analyst-entered\) | Yes | Always rendered from the analyst-pasted PIID and place of performance, independent of any other evidence attached. |
+| Capture window | Yes | Computed from the attached live Contract Facts pull's potential period end date. |
+| Incumbent & teaming leads / PL-impact | Yes | Evidence attached: facts + directory. |
+| Staffing what-if | Yes | An analyst-entered staffing baseline was attached to this render. |
+| Geography \(ACS\) | Yes | Section rendered as a placeholder -- no ACS context retrieved \(not yet pulled\). |
+| PL cross-reference \(R2b\) | Yes | A PL workbook was cross-referenced against this render's worksite. |
+| Procurement List activity \(Federal Register\) | Not included | No Federal Register pull attached. |
+| R2a determination-support map | Yes | Always rendered -- routes whatever evidence is currently attached above onto the four suitability criteria of 41 CFR 51-2.4\(a\). |
+
+**Source manifest** — every attached source, its reference, retrieval time, and assurance:
+
+| Source | Reference | Retrieved at | Assurance | Notes |
+|---|---|---|---|---|
+| Radar handoff \(analyst upload\) | sample_radar_handoff.json \(SYNTHETIC example\) | 2026-07-15 | USER_ATTESTED | The handoff's claimed snapshot retrieval time; not independently verified. Live Contract Facts, where attached, supersede this claim. SYNTHETIC example handoff — not real Radar output. |
+| Contract Facts \(SYNTHETIC example, offline\) | bundled SYNTHETIC example \(offline\) -- not a live USAspending retrieval | 2026-07-22T12:00:00+00:00 | SYNTHETIC_EXAMPLE | SYNTHETIC example — not real USAspending data. |
+| AbilityOne NPA directory \(analyst upload\) | sample_nib_npa.xlsx \(SYNTHETIC example\) | Not supplied \(analyst attestation absent\) | USER_ATTESTED |  |
+| Staffing what-if inputs \(analyst-entered\) | HOURS mode entry | Not supplied \(analyst attestation absent\) | USER_ATTESTED |  |
+| Procurement List cross-reference workbook \(R2b\) | sample_pl_services.xlsx \(SYNTHETIC example\) | 2026-07-24 | USER_ATTESTED | SYNTHETIC example workbook — not real Procurement List data |
+
+The full file adds the stamped header, the attestation disclaimers, and the packet body
+those two tables describe.
+
 ## The Opportunity Packet
 
 Work one page, top to bottom; the packet re-renders as evidence attaches:

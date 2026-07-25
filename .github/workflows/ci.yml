@@ -53,8 +53,8 @@ jobs:
         # streamlit==1.46.1 (PYSEC-2026-212/2285) and its transitive pillow
         # dependency (PYSEC-2026-165 and others); fixing either requires a
         # streamlit major-version bump, which is a runtime-behavior change
-        # this CI-hardening task does not make unilaterally (563+ tests are
-        # AppTest-pinned to this exact streamlit version -- see ADR history).
+        # this CI-hardening task does not make unilaterally (the AppTest
+        # suite is pinned to this exact streamlit version -- see ADR history).
         # Non-blocking until the owner triages and bumps the pinned version.
         run: pip-audit -r requirements.txt || true
 

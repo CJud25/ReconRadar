@@ -120,8 +120,10 @@ exports only — no person-level data. The bundled demo data is synthetic and
 validated on every test run. Counsel-gated regulatory claims are excluded from
 every rendered surface, test-enforced.
 
-563 tests run in CI, including dedicated guards for markdown-injection,
-counsel-gated vocabulary, and the no-score rule.
+The suite is 585 tests as of this commit (`py -m pytest`), including dedicated
+guards for markdown-injection, counsel-gated vocabulary, and the no-score rule.
+CI runs that suite plus `ruff check .` and `py scripts/validate_demo_data.py` on
+Python 3.11 and 3.12, on every push and pull request.
 
 ## License
 

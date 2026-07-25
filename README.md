@@ -125,6 +125,29 @@ guards for markdown-injection, counsel-gated vocabulary, and the no-score rule.
 CI runs that suite plus `ruff check .` and `py scripts/validate_demo_data.py` on
 Python 3.11 and 3.12, on every push and pull request.
 
+## How this was built
+
+Chris Judkins specified this system, decomposed it into gated slices, and
+verified each one; AI agents wrote most of the line-level code. The commit
+history shows it — most commits here carry a `Co-Authored-By: Claude` trailer.
+
+The loop was the same every slice: nothing merged until the repo's own gate was
+green (`py -m pytest` and `ruff check .`, both run in CI on every push and pull
+request), and each slice went through an independent adversarial review before
+merge. ADR-015, ADR-017 and ADR-018 record what those reviews changed.
+
+One catch the model missed. In the incumbent-leads slice, the generated design
+treated "sole-source award" and "one or zero offers received" as two signals
+corroborating each other. They are not independent: on a sole-source award the
+government solicits one vendor by definition, so the offers count is *entailed*
+by the designation and adds no evidence. The `Lead-corroborated` band was
+reserved instead; that pair now renders `Lead-single`, with the offers count
+named as consistent with — not corroborating — the designation (ADR-017,
+Decision 4; `src/tens_hq/incumbent_leads.py`).
+
+The judgment calls — what to refuse to compute, what to delete, which label was
+wrong — are the part worth evaluating.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

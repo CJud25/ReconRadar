@@ -17,7 +17,8 @@ suitability.
 One expiring contract in; this document out. Below is a byte-verbatim excerpt of
 [`docs/examples/example-packet.md`](docs/examples/example-packet.md) — the real, unedited
 output of the export path, generated offline from the repo's bundled SYNTHETIC samples by
-`py scripts/generate_example_packet.py`. Nothing in it was typed by hand.
+`py scripts/generate_example_packet.py`. Nothing in the packet was typed by hand; the
+hand-written preamble at the top of that file is the only exception, and it says so.
 
 **Section ledger** — every section, included or honestly absent, with the reason:
 
@@ -138,10 +139,12 @@ most of the line-level code. The history says so plainly — every commit here
 except the two GitHub merge commits carries a `Co-Authored-By: Claude ...`
 trailer.
 
-The gate every slice had to clear is the repo's own CI — three commands, on
-Python 3.11 and 3.12, on every push and pull request
-(`.github/workflows/ci.yml`): `ruff check .`, `python -m pytest -q`, and
-`python scripts/validate_demo_data.py`.
+The gate every slice had to clear was `python -m pytest -q` and
+`python scripts/validate_demo_data.py`, run on Python 3.11. CI has grown since:
+`.github/workflows/ci.yml` now also runs `ruff check .`, adds a Python 3.12 leg,
+and builds and smoke-boots the container on every push and pull request. Both
+of those last two arrived on 2026-07-23, after the slice work — so the pipeline
+a reader sees today is stricter than the one the slices were held to.
 
 The finds belong to the review passes, and the record credits them there.
 ADR-017 notes that adversarial verification corrected an earlier draft of the

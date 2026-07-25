@@ -132,27 +132,29 @@ Python 3.11 and 3.12, on every push and pull request.
 
 ## How this was built
 
-Chris Judkins specified this system, decomposed it into gated slices, and
-verified each one; AI agents wrote most of the line-level code. The commit
-history shows it — most commits here carry a `Co-Authored-By: Claude` trailer.
+Chris Judkins specified this system, decomposed it into gated slices, ran the
+adversarial review passes over them, and wrote the fix commits; AI agents wrote
+most of the line-level code. The history says so plainly — every commit here
+except the two GitHub merge commits carries a `Co-Authored-By: Claude ...`
+trailer.
 
-The loop was the same every slice: nothing merged until the repo's own gate was
-green — `py -m pytest` and `ruff check .`, both of which CI also runs on every
-push and pull request — and each slice went through an independent adversarial
-review before merge. ADR-015, ADR-017 and ADR-018 record what those reviews
-changed.
+The gate every slice had to clear is the repo's own CI — three commands, on
+Python 3.11 and 3.12, on every push and pull request
+(`.github/workflows/ci.yml`): `ruff check .`, `python -m pytest -q`, and
+`python scripts/validate_demo_data.py`.
 
-One catch the model missed. In the incumbent-leads slice, the generated design
-treated "sole-source award" and "one or zero offers received" as two signals
-corroborating each other. They are not independent: on a sole-source award the
-government solicits one vendor by definition, so the offers count is *entailed*
-by the designation and adds no evidence. The `Lead-corroborated` band was
-reserved instead; that pair now renders `Lead-single`, with the offers count
-named as consistent with — not corroborating — the designation (ADR-017,
-Decision 4; `src/tens_hq/incumbent_leads.py`).
+The finds belong to the review passes, and the record credits them there.
+ADR-017 notes that adversarial verification corrected an earlier draft of the
+incumbent-leads band design, which had treated a sole-source designation and
+its entailed offers count as two corroborating signals. ADR-015's second
+2026-07-21 Update records an adversarial-verification fix pass applied hours
+after the Decision it supersedes was written. In this repo's history,
+`f50a421` is a review-fix commit sitting directly on top of the release it
+corrects.
 
-The judgment calls — what to refuse to compute, what to delete, which label was
-wrong — are the part worth evaluating.
+The judgment calls — where the slice boundaries fell, what to refuse to
+compute, what to delete, and the decision to run an adversarial pass at all —
+are the part worth evaluating.
 
 ## License
 

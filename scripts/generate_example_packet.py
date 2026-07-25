@@ -16,7 +16,7 @@ meant to show.
 
 ``as_of`` is fixed so the output is byte-stable across runs; regenerate with:
 
-    py -m pip install -r requirements-dev.txt   # openpyxl parses the workbooks
+    py -m pip install -r requirements.txt
     py scripts/generate_example_packet.py
 """
 

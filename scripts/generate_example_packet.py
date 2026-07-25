@@ -169,7 +169,10 @@ def main() -> int:
 
     _OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     _OUT_PATH.write_text(_PREAMBLE + export_doc, encoding="utf-8", newline="\n")
-    print(f"wrote {_OUT_PATH.relative_to(_REPO_ROOT)} ({len(export_doc.splitlines())} export lines)")
+    print(
+        f"wrote {_OUT_PATH.relative_to(_REPO_ROOT)} "
+        f"({len(export_doc.splitlines())} export lines)"
+    )
     return 0
 
 

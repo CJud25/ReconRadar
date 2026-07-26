@@ -134,16 +134,24 @@ def _handoff_row(handoff_attached: bool, handoff_piid_matched: bool) -> SectionE
 
 
 def _gate_row(eligibility: object | None, contract_facts: ContractFactsRecord | None) -> SectionEntry:
-    """The gate row's basis distinguishes analyst-entered vs retrieved-live feeding.
+    """The gate basis distinguishes analyst-entered, synthetic, and live feeding.
 
     Pinned predicate (audit finding): ``included`` is
     ``eligibility is not None OR contract_facts is not None``. The packet
     builder (``opportunity_packet.py:256-279``) recomputes the gate from
     ``contract_facts.set_aside_code`` and IGNORES a ``None`` eligibility once
-    live facts are attached, so a live-fed render must read included with a
-    retrieved-live basis even when no ``eligibility`` object was supplied.
+    facts are attached, so an attached-facts render must read included with a
+    source-specific basis even when no ``eligibility`` object was supplied.
     """
 
+    if contract_facts is not None and contract_facts.synthetic_example:
+        return SectionEntry(
+            "Eligibility gate",
+            True,
+            "Gate fed by the attached SYNTHETIC example set-aside value "
+            "(USAspending FPDS type_set_aside), which supersedes any "
+            "analyst-typed value once the example Contract Facts are attached.",
+        )
     if contract_facts is not None:
         return SectionEntry(
             "Eligibility gate",
@@ -199,6 +207,13 @@ def _contract_facts_analyst_row() -> SectionEntry:
 
 
 def _capture_window_row(contract_facts: ContractFactsRecord | None) -> SectionEntry:
+    if contract_facts is not None and contract_facts.synthetic_example:
+        return SectionEntry(
+            "Capture window",
+            True,
+            "Computed from the attached SYNTHETIC example Contract Facts' "
+            "potential period end date.",
+        )
     if contract_facts is not None:
         return SectionEntry(
             "Capture window",
@@ -374,7 +389,7 @@ def derive_section_ledger(
 
 _HANDOFF_SNAPSHOT_NOTE = (
     "The handoff's claimed snapshot retrieval time; not independently "
-    "verified. Live Contract Facts, where attached, supersede this claim."
+    "verified. Contract Facts, where attached, supersede this claim."
 )
 
 

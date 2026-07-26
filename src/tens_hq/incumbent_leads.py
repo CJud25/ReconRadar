@@ -512,9 +512,9 @@ def incumbent_leads_lines(assessment: IncumbentLeads, *, contract_facts: Contrac
     """Render the section as caveat-first Markdown lines (pure).
 
     Leads are rendered in two evidentiary groups -- (1) competition/
-    registration facts sourced from the live Contract Facts pull and (2)
-    subaward evidence sourced from the live subawards pull -- each closed
-    with its own Source/Retrieved-at/Assurance footer, followed by any
+    registration facts sourced from the attached Contract Facts and (2)
+    attached subaward evidence -- each closed with its own
+    Source/Retrieved-at/Assurance footer, followed by any
     directory cross-reference (Assurance USER_ATTESTED, since the uploaded
     directory is an analyst attestation even though the matched subawardee
     fact itself is API-retrieved) and the PL-impact context block (D3).
@@ -531,15 +531,12 @@ def incumbent_leads_lines(assessment: IncumbentLeads, *, contract_facts: Contrac
     non_directory = [lead for lead in assessment.leads if lead.band is not LeadBand.COINCIDENT]
     directory_leads = [lead for lead in assessment.leads if lead.band is LeadBand.COINCIDENT]
 
-    for source_key, group in itertools.groupby(
+    for _source_key, group in itertools.groupby(
         non_directory, key=lambda lead: (lead.source_url, lead.retrieved_at)
     ):
         group_leads = list(group)
         assurance = _ASSURANCE_API_RETRIEVED
-        if contract_facts.synthetic_example and source_key == (
-            contract_facts.source_url,
-            contract_facts.retrieved_at,
-        ):
+        if contract_facts.synthetic_example:
             # ADR-025: reuse the manifest's one canonical synthetic assurance.
             # Deferred to avoid packet_export -> opportunity_packet -> this
             # module forming an import cycle during module initialization.

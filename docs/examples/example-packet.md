@@ -25,25 +25,18 @@ say the same thing:
   as prose inside the Incumbent & teaming leads / PL-impact context section:
   "No subaward records were retrieved for this award..."
 
-**Known defect, disclosed rather than hidden.** Three provenance labels below
-describe this offline synthetic run as if it were live API data:
+**Previously disclosed defect, now closed.** The preceding generated example
+honestly listed three places that mislabeled attached SYNTHETIC example facts
+as live API data: the Origin supersession line, the Eligibility gate ledger
+row, and the Capture window ledger row. All three now branch on
+`contract_facts.synthetic_example` and preserve their informational content
+without claiming live or API-retrieved provenance.
 
-1. Origin (Radar handoff) section: "Live USAspending Contract Facts are
-   attached to this packet".
-2. Section ledger, Eligibility gate row: "Gate fed by the LIVE retrieved
-   set-aside value ...".
-3. Section ledger, Capture window row: "Computed from the attached live
-   Contract Facts pull's potential period end date."
-
-All three branch on whether contract facts are attached and never on whether
-those facts are synthetic: `src/tens_hq/opportunity_packet.py:360`,
-`src/tens_hq/packet_export.py:147-154` and `:202-208`. The check they are
-missing is already written twice elsewhere, both under ADR-025:
-`packet_export.py:170` (`_contract_facts_live_row`) and `packet_export.py:438`
-(the Source manifest row). That is why the Contract Facts ledger row and its
-`SYNTHETIC_EXAMPLE` manifest assurance ARE correct here. Fixing the three sites
-above is a product-behavior change, not a documentation change, and is not made
-here.
+`tests/test_synthetic_provenance_sweep.py` now builds the full synthetic export
+and rejects `API_RETRIEVED` plus non-negated live-claim language across the
+rendered packet body, all eleven Section ledger rows, and the Source manifest.
+Its coverage meta-test pins the required sections and rendered line count so
+removing content cannot make the assurance pass vacuously.
 
 ---
 
@@ -63,9 +56,9 @@ here.
 
 ## Origin — Radar handoff (context, not evidence)
 
-- This packet's target was handed off from a Radar snapshot dated 2026-07-15. Every value below is a claim from that snapshot — NOT packet evidence. Every fact this packet asserts is either retrieved live with its own citation or explicitly analyst-entered. The handoff never feeds the Eligibility Gate or any other assessment.
+- This packet's target was handed off from a Radar snapshot dated 2026-07-15. Every value below is a claim from that snapshot — NOT packet evidence. Every fact this packet asserts carries its own citation or is explicitly analyst-entered. The handoff never feeds the Eligibility Gate or any other assessment.
 - SYNTHETIC example handoff — not real Radar output.
-- Live USAspending Contract Facts are attached to this packet; where they differ from these snapshot claims, the live values govern.
+- Bundled SYNTHETIC example Contract Facts are attached to this packet; where they differ from these snapshot claims, the attached facts govern.
 - Radar source: GovConRadar 2.8.0 \(SYNTHETIC sample\)
 - Radar-claimed PIID: SYNTH-A2-0001
 - Radar-claimed recipient: SYNTHETIC EXAMPLE SERVICES LLC · UEI SYNTHUEI0001A
@@ -83,7 +76,7 @@ here.
 - This gate presents the cited set-aside status plus a structural rule for analyst review; it does not determine eligibility. The human decides.
 - Set-aside status not reported (blank ≠ unrestricted). Verify against SAM.gov / USAspending before relying on this.
 
-- Source: USAspending returned no set-aside on the latest FPDS transaction (type_set_aside was null). Null = not reported, which is why this reads UNKNOWN and NOT unrestricted.
+- Source: bundled SYNTHETIC example Contract Facts contain no set-aside value (type_set_aside is null). Null = not reported, which is why this reads UNKNOWN and NOT unrestricted.
 - Retrieved from: bundled SYNTHETIC example (offline) -- not a live USAspending retrieval
 - Retrieved at: 2026-07-22T12:00:00+00:00
 - Raw set-aside (from USAspending FPDS): None (no value supplied)
@@ -180,7 +173,7 @@ here.
 
 ## Geography context (ACS)
 
-- Not yet retrieved. Use the live ACS pull to attach county-level disability context for this place.
+- Not yet retrieved. No ACS context is attached. Use the ACS pull to attach county-level disability context for this place.
 - Geographic context only -- a county-level ACS population statistic. This is NOT a candidate-supply, hiring-pool, capacity, eligibility, or partnership claim, and it is not evidence of available workers for this contract.
 
 ## Procurement List cross-reference (R2b)
@@ -234,10 +227,10 @@ here.
 | Section | Included | Basis |
 |---|---|---|
 | Origin \(Radar handoff\) | Yes | A Radar handoff snapshot is attached and its PIID matches this packet's current PIID. |
-| Eligibility gate | Yes | Gate fed by the LIVE retrieved set-aside value \(USAspending FPDS type_set_aside\), which supersedes any analyst-typed value once live Contract Facts are attached. |
+| Eligibility gate | Yes | Gate fed by the attached SYNTHETIC example set-aside value \(USAspending FPDS type_set_aside\), which supersedes any analyst-typed value once the example Contract Facts are attached. |
 | Contract Facts \(SYNTHETIC example\) | Yes | Bundled SYNTHETIC example facts attached — offline, not a real USAspending API retrieval. |
 | Contract Facts \(analyst-entered\) | Yes | Always rendered from the analyst-pasted PIID and place of performance, independent of any other evidence attached. |
-| Capture window | Yes | Computed from the attached live Contract Facts pull's potential period end date. |
+| Capture window | Yes | Computed from the attached SYNTHETIC example Contract Facts' potential period end date. |
 | Incumbent & teaming leads / PL-impact | Yes | Evidence attached: facts + directory. |
 | Staffing what-if | Yes | An analyst-entered staffing baseline was attached to this render. |
 | Geography \(ACS\) | Yes | Section rendered as a placeholder -- no ACS context retrieved \(not yet pulled\). |
@@ -249,7 +242,7 @@ here.
 
 | Source | Reference | Retrieved at | Assurance | Notes |
 |---|---|---|---|---|
-| Radar handoff \(analyst upload\) | sample_radar_handoff.json \(SYNTHETIC example\) | 2026-07-15 | USER_ATTESTED | The handoff's claimed snapshot retrieval time; not independently verified. Live Contract Facts, where attached, supersede this claim. SYNTHETIC example handoff — not real Radar output. |
+| Radar handoff \(analyst upload\) | sample_radar_handoff.json \(SYNTHETIC example\) | 2026-07-15 | USER_ATTESTED | The handoff's claimed snapshot retrieval time; not independently verified. Contract Facts, where attached, supersede this claim. SYNTHETIC example handoff — not real Radar output. |
 | Contract Facts \(SYNTHETIC example, offline\) | bundled SYNTHETIC example \(offline\) -- not a live USAspending retrieval | 2026-07-22T12:00:00+00:00 | SYNTHETIC_EXAMPLE | SYNTHETIC example — not real USAspending data. |
 | AbilityOne NPA directory \(analyst upload\) | sample_nib_npa.xlsx \(SYNTHETIC example\) | Not supplied \(analyst attestation absent\) | USER_ATTESTED |  |
 | Staffing what-if inputs \(analyst-entered\) | HOURS mode entry | Not supplied \(analyst attestation absent\) | USER_ATTESTED |  |

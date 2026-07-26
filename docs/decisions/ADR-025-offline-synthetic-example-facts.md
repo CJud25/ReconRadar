@@ -140,7 +140,18 @@ resembling a real retrieval anywhere it appears.
 
 ## Amendment (2026-07-25)
 
-The same rule now covers `incumbent_leads.py`: grouped leads sourced from
-synthetic Contract Facts use `SYNTHETIC_EXAMPLE`, never `API_RETRIEVED`.
-Live subaward groups remain `API_RETRIEVED` because the Contract Facts flag
-describes only the Contract Facts source.
+The same rule now covers every non-directory group rendered by
+`incumbent_leads.py` during a synthetic run: all use `SYNTHETIC_EXAMPLE`,
+never `API_RETRIEVED`. This includes a subaward group whose source URL and
+retrieval time differ from the Contract Facts because `_subaward_leads()`
+copies those fields from `SubawardsResult`; the Contract Facts flag governs
+the run's provenance label, not just an exact source-tuple match. The import
+of the canonical assurance remains deferred because a module-scope import
+forms the real `packet_export -> opportunity_packet -> incumbent_leads ->
+packet_export` initialization cycle.
+
+The remaining synthetic packet branches now label the Origin supersession,
+Eligibility gate, and Capture window from `synthetic_example`, while a
+whole-export sweep covers the rendered body, all eleven ledger rows, and the
+Source manifest so another section cannot silently restore a live-provenance
+claim.

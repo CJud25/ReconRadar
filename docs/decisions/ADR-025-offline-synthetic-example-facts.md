@@ -63,11 +63,10 @@ resembling a real retrieval anywhere it appears.
    invisible everywhere, so all three had to change in the same commit:
    - **Packet body** (`opportunity_packet.py`): the Contract Facts heading
      and provenance line switch to "SYNTHETIC example — offline, not a live
-     retrieval" / "does not carry an API_RETRIEVED assurance label" when the
-     flag is set -- deliberately worded so the literal substring "Assurance
-     API_RETRIEVED" never appears in that section, letting the honesty test
-     be a clean substring ban rather than relying on a human to parse a
-     negation correctly.
+     retrieval" / "no live-API provenance is claimed" when the flag is set --
+     deliberately worded so `API_RETRIEVED` never appears in a synthetic
+     packet, letting the honesty test be a clean whole-packet substring ban
+     rather than relying on a human to parse a negation correctly.
    - **Section ledger** (`packet_export.py::_contract_facts_live_row`): the
      synthetic row is named "Contract Facts (SYNTHETIC example)" with a basis
      deliberately worded without the token "live" anywhere, so a reader (or a
@@ -138,3 +137,10 @@ resembling a real retrieval anywhere it appears.
   an `AppTest` driving the real widgets offline (handoff → Pull contract
   facts (live)) to confirm no `app.exception` and a populated, labeled
   render through the actual UI.
+
+## Amendment (2026-07-25)
+
+The same rule now covers `incumbent_leads.py`: grouped leads sourced from
+synthetic Contract Facts use `SYNTHETIC_EXAMPLE`, never `API_RETRIEVED`.
+Live subaward groups remain `API_RETRIEVED` because the Contract Facts flag
+describes only the Contract Facts source.

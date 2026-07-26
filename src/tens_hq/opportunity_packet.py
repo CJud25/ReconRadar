@@ -210,7 +210,7 @@ def live_contract_facts_lines(record: ContractFactsRecord) -> list[str]:
         heading = "## Contract Facts (SYNTHETIC example — offline, not a live retrieval)"
         provenance_line = (
             "- Provenance: bundled SYNTHETIC example, offline — NOT a live "
-            "retrieval and does not carry an API_RETRIEVED assurance label."
+            "retrieval; no live-API provenance is claimed."
         )
     else:
         heading = "## Contract Facts (live — USAspending, cited)"

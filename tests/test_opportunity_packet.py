@@ -721,6 +721,19 @@ def test_packet_synthetic_example_contract_facts_renders_synthetic_heading() -> 
     assert "NOT a live" in live_section
 
 
+def test_packet_synthetic_record_never_claims_api_provenance() -> None:
+    record = _contract_facts(
+        synthetic_example=True,
+        source_url="bundled SYNTHETIC example (offline) -- not a live USAspending retrieval",
+    )
+    packet = build_opportunity_packet_markdown(
+        piid="SYNTH-A2-0001", county="Denver", state="CO", contract_facts=record
+    )
+
+    assert "API_RETRIEVED" not in packet
+    assert "Provenance assurance: SYNTHETIC_EXAMPLE" in packet
+
+
 def test_packet_non_synthetic_contract_facts_renders_live_heading_unchanged() -> None:
     # Regression companion: a real (synthetic_example=False, the default)
     # record must still render the exact original live heading/provenance.

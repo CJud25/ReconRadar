@@ -512,9 +512,9 @@ def incumbent_leads_lines(assessment: IncumbentLeads, *, contract_facts: Contrac
     """Render the section as caveat-first Markdown lines (pure).
 
     Leads are rendered in two evidentiary groups -- (1) competition/
-    registration facts sourced from the live Contract Facts pull and (2)
-    subaward evidence sourced from the live subawards pull -- each closed
-    with its own Source/Retrieved-at/Assurance footer, followed by any
+    registration facts sourced from the attached Contract Facts and (2)
+    attached subaward evidence -- each closed with its own
+    Source/Retrieved-at/Assurance footer, followed by any
     directory cross-reference (Assurance USER_ATTESTED, since the uploaded
     directory is an analyst attestation even though the matched subawardee
     fact itself is API-retrieved) and the PL-impact context block (D3).
@@ -531,8 +531,19 @@ def incumbent_leads_lines(assessment: IncumbentLeads, *, contract_facts: Contrac
     non_directory = [lead for lead in assessment.leads if lead.band is not LeadBand.COINCIDENT]
     directory_leads = [lead for lead in assessment.leads if lead.band is LeadBand.COINCIDENT]
 
-    for _key, group in itertools.groupby(non_directory, key=lambda lead: (lead.source_url, lead.retrieved_at)):
-        _render_group(lines, list(group), assurance=_ASSURANCE_API_RETRIEVED)
+    for _source_key, group in itertools.groupby(
+        non_directory, key=lambda lead: (lead.source_url, lead.retrieved_at)
+    ):
+        group_leads = list(group)
+        assurance = _ASSURANCE_API_RETRIEVED
+        if contract_facts.synthetic_example:
+            # ADR-025: reuse the manifest's one canonical synthetic assurance.
+            # Deferred to avoid packet_export -> opportunity_packet -> this
+            # module forming an import cycle during module initialization.
+            from .packet_export import _ASSURANCE_SYNTHETIC_EXAMPLE
+
+            assurance = _ASSURANCE_SYNTHETIC_EXAMPLE
+        _render_group(lines, group_leads, assurance=assurance)
 
     if not assessment.subawards_attached or assessment.subawards_record_count == 0:
         lines.append(f"- {SUBAWARDS_ABSENCE_CAVEAT}")

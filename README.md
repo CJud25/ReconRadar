@@ -106,13 +106,13 @@ Federal Register) need internet, and the ACS pull needs a free Census API key in
 `TENS_HQ_CENSUS_API_KEY` (the key rides only the wire request — cited URLs stay
 keyless by construction).
 
-**Hosting note.** The case ledger (`data/runtime/tens_hq.sqlite3`) is local,
-single-user, and unauthenticated — it is not an identity, access-control, or
-multi-tenant boundary. A shared hosted URL running this app would commingle every
-visitor's cases and let one visitor read or mutate another's. Run the full app
-locally (or per pilot analyst), or host only the packet-only surface, until
-per-identity isolation and auth land (see `docs/ARCHITECTURE.md` §"Trust and
-storage boundaries").
+**Hosting note.** Packet-only is the fail-safe default, and the hosted demo runs
+without the case ledger. Set `TENS_HQ_ENABLE_CASE_LEDGER=1` only for a local or
+per-pilot-analyst deployment. The ledger (`data/runtime/tens_hq.sqlite3`) is
+local, single-user, and unauthenticated — it is not an identity, access-control,
+or multi-tenant boundary. Enabling it on a shared hosted URL would commingle
+every visitor's cases and let one visitor read or mutate another's (see
+`docs/ARCHITECTURE.md` §"Trust and storage boundaries").
 
 - `docs/DEMO_SCRIPT.md` — a guided walkthrough (the in-app "▶ Guided demo"
   follows it).

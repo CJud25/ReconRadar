@@ -371,6 +371,26 @@ def test_every_lead_in_a_full_assessment_carries_a_source() -> None:
         assert lead.retrieved_at.strip()
 
 
+def test_synthetic_run_labels_non_directory_groups_from_different_sources_synthetic() -> None:
+    cf = _cf(
+        synthetic_example=True,
+        source_url="bundled SYNTHETIC example Contract Facts",
+    )
+    subawards = _sub(
+        SubawardRecord("1", "ExampleWorks Sub LLC", 5000.0, "2025-01-01", "description")
+    )
+    assert (subawards.source_url, subawards.retrieved_at) != (
+        cf.source_url,
+        cf.retrieved_at,
+    )
+
+    assessment = derive_incumbent_leads(cf, subawards=subawards)
+    rendered = _render(assessment, cf)
+
+    assert "API_RETRIEVED" not in rendered
+    assert rendered.count("Provenance assurance: SYNTHETIC_EXAMPLE") == 2
+
+
 # --- N1: no score/tier/rank/recommendation; no directive vocabulary ----------
 
 

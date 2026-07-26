@@ -13,7 +13,7 @@ packet renders a one-page, fully-cited evidence sheet with up to eleven sections
    eligibility or pursuit determination (ADR-003/ADR-013).
 2. **Contract Facts** -- only the pasted identifiers, clearly labeled
    *analyst-entered* and not independently verified.
-3. **Capture window** -- optional; appended only when live Contract Facts are
+3. **Capture window** -- optional; appended only when Contract Facts are
    attached. Estimates a BAND for the likely follow-on solicitation date and
    the R2a Procurement-List-addition start-by date from the contract's
    potential end date, anchored to the solicitation clock (not the contract
@@ -21,7 +21,7 @@ packet renders a one-page, fully-cited evidence sheet with up to eleven sections
    :mod:`tens_hq.capture_window`, ADR-015/ADR-020). Never a single-point
    runway or a determination.
 4. **Incumbent & teaming leads / PL-impact context** -- optional; appended only
-   when live Contract Facts are attached. Cited competition-posture and
+   when Contract Facts are attached. Cited competition-posture and
    registration leads, plus optional subaward teaming-posture evidence and an
    AbilityOne-directory name cross-reference (Coincident band, analyst-confirm
    only), and PL-impact side-by-side facts with deliberately no computed share
@@ -210,7 +210,7 @@ def live_contract_facts_lines(record: ContractFactsRecord) -> list[str]:
         heading = "## Contract Facts (SYNTHETIC example — offline, not a live retrieval)"
         provenance_line = (
             "- Provenance: bundled SYNTHETIC example, offline — NOT a live "
-            "retrieval and does not carry an API_RETRIEVED assurance label."
+            "retrieval; no live-API provenance is claimed."
         )
     else:
         heading = "## Contract Facts (live — USAspending, cited)"
@@ -258,8 +258,8 @@ def geography_lines(geography: GeographyRecord | None) -> list[str]:
     if geography is None:
         lines.extend(
             [
-                "- Not yet retrieved. Use the live ACS pull to attach county-level "
-                "disability context for this place.",
+                "- Not yet retrieved. No ACS context is attached. Use the ACS pull "
+                "to attach county-level disability context for this place.",
                 f"- {GEOGRAPHY_CONTEXT_DISCLAIMER}",
             ]
         )
@@ -357,28 +357,56 @@ def build_opportunity_packet_markdown(
     ]
     if radar_handoff is not None:
         lines.extend(
-            radar_handoff_lines(radar_handoff, live_facts_attached=contract_facts is not None)
+            radar_handoff_lines(
+                radar_handoff,
+                live_facts_attached=(
+                    contract_facts is not None and not contract_facts.synthetic_example
+                ),
+                synthetic_facts_attached=(
+                    contract_facts is not None and contract_facts.synthetic_example
+                ),
+            )
         )
         lines.append("")
     gate = eligibility
     gate_source_lines = None
     if contract_facts is not None:
-        # A live retrieved value supersedes the analyst-typed value. In
+        # Attached facts supersede the analyst-typed value. In
         # particular, null remains UNKNOWN rather than becoming unrestricted.
         gate = assess_eligibility(contract_facts.set_aside_code)
         code = (contract_facts.set_aside_code or "").strip()
         if code:
+            if contract_facts.synthetic_example:
+                source_line = (
+                    "Source: set-aside code from the bundled SYNTHETIC example "
+                    "Contract Facts (FPDS latest transaction, type_set_aside); "
+                    "not analyst-entered."
+                )
+            else:
+                source_line = (
+                    "Source: set-aside code retrieved LIVE from USAspending "
+                    "(FPDS latest transaction, type_set_aside); not analyst-entered."
+                )
             gate_source_lines = (
-                "Source: set-aside code retrieved LIVE from USAspending "
-                "(FPDS latest transaction, type_set_aside); not analyst-entered.",
+                source_line,
                 f"Retrieved from: {contract_facts.source_url}",
                 f"Retrieved at: {contract_facts.retrieved_at}",
             )
         else:
+            if contract_facts.synthetic_example:
+                source_line = (
+                    "Source: bundled SYNTHETIC example Contract Facts contain no "
+                    "set-aside value (type_set_aside is null). Null = not reported, "
+                    "which is why this reads UNKNOWN and NOT unrestricted."
+                )
+            else:
+                source_line = (
+                    "Source: USAspending returned no set-aside on the latest FPDS "
+                    "transaction (type_set_aside was null). Null = not reported, which is "
+                    "why this reads UNKNOWN and NOT unrestricted."
+                )
             gate_source_lines = (
-                "Source: USAspending returned no set-aside on the latest FPDS "
-                "transaction (type_set_aside was null). Null = not reported, which is "
-                "why this reads UNKNOWN and NOT unrestricted.",
+                source_line,
                 f"Retrieved from: {contract_facts.source_url}",
                 f"Retrieved at: {contract_facts.retrieved_at}",
             )

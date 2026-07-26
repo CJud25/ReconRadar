@@ -75,6 +75,7 @@ The two uses of `Validated` are related but distinct. Evidence readiness is nonn
 
 - Public workbook rows never enter the synthetic demonstration data.
 - Live sources are called only after the analyst presses the corresponding control; the app does not scrape PLIMS, call undocumented endpoints, or fetch arbitrary URLs.
+- Packet-only is the fail-safe default. The case ledger is constructed only when `TENS_HQ_ENABLE_CASE_LEDGER=1`; the shared hosted demo leaves it disabled.
 - The case ledger is local, single-user pilot infrastructure. It is not an authentication, authorization, encryption, backup, records-management, or multi-user boundary.
 - Role and team aliases stored on cases are descriptive metadata, not access control.
 - The existing `TENS_HQ_*` environment-variable names are retained as the umbrella-family prefix.

@@ -45,6 +45,7 @@ from .packet_export import (
 )
 from .pl_match import find_pl_service_matches
 from .radar_handoff import RadarHandoffError, parse_radar_handoff
+from .roles import case_ledger_enabled
 from .scanner import ScanStatus, WorkbookScanner
 from .staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 
@@ -1359,6 +1360,16 @@ def render_public_bd_page(data: Any, target: float, scenario: str) -> None:
     st.markdown('<div class="page-subtitle">Turn an approved location into a repeatable evidence case: import, reconcile, review, resolve the route, and validate.</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="planning-banner">{_PUBLIC_BANNER}</div>', unsafe_allow_html=True)
     st.warning("Public directory evidence is discovery evidence only. The scanner never infers capacity, candidate supply, a relationship, or an acquisition outcome.")
+
+    if not case_ledger_enabled():
+        st.info(
+            "The case ledger is disabled on this hosted demo because its local, "
+            "single-user store has no authentication."
+        )
+        (packet_tab,) = st.tabs(["Opportunity Packet"])
+        with packet_tab:
+            _render_opportunity_packet()
+        return
 
     try:
         repo = _repository(_default_db_path())

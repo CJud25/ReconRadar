@@ -85,28 +85,18 @@ say the same thing:
   as prose inside the Incumbent & teaming leads / PL-impact context section:
   "No subaward records were retrieved for this award..."
 
-**Known defect, disclosed rather than hidden.** Four provenance labels below
-describe this offline synthetic run as if it were live API data:
+**Previously disclosed defect, now closed.** The preceding generated example
+honestly listed three places that mislabeled attached SYNTHETIC example facts
+as live API data: the Origin supersession line, the Eligibility gate ledger
+row, and the Capture window ledger row. All three now branch on
+`contract_facts.synthetic_example` and preserve their informational content
+without claiming live or API-retrieved provenance.
 
-1. Origin (Radar handoff) section: "Live USAspending Contract Facts are
-   attached to this packet".
-2. Incumbent & teaming leads / PL-impact context section: "Provenance
-   assurance: API_RETRIEVED".
-3. Section ledger, Eligibility gate row: "Gate fed by the LIVE retrieved
-   set-aside value ...".
-4. Section ledger, Capture window row: "Computed from the attached live
-   Contract Facts pull's potential period end date."
-
-All four branch on whether contract facts are attached and never on whether
-those facts are synthetic: `src/tens_hq/opportunity_packet.py:360`,
-`src/tens_hq/incumbent_leads.py:468` and `:535`, and
-`src/tens_hq/packet_export.py:147-154` and `:202-208`. The check they are
-missing is already written twice elsewhere, both under ADR-025:
-`packet_export.py:170` (`_contract_facts_live_row`) and `packet_export.py:438`
-(the Source manifest row). That is why the Contract Facts ledger row and its
-`SYNTHETIC_EXAMPLE` manifest assurance ARE correct here. Fixing the four sites
-above is a product-behavior change, not a documentation change, and is not made
-here.
+`tests/test_synthetic_provenance_sweep.py` now builds the full synthetic export
+and rejects `API_RETRIEVED` plus non-negated live-claim language across the
+rendered packet body, all eleven Section ledger rows, and the Source manifest.
+Its coverage meta-test pins the required sections and rendered line count so
+removing content cannot make the assurance pass vacuously.
 
 ---
 

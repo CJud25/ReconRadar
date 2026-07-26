@@ -63,11 +63,10 @@ resembling a real retrieval anywhere it appears.
    invisible everywhere, so all three had to change in the same commit:
    - **Packet body** (`opportunity_packet.py`): the Contract Facts heading
      and provenance line switch to "SYNTHETIC example — offline, not a live
-     retrieval" / "does not carry an API_RETRIEVED assurance label" when the
-     flag is set -- deliberately worded so the literal substring "Assurance
-     API_RETRIEVED" never appears in that section, letting the honesty test
-     be a clean substring ban rather than relying on a human to parse a
-     negation correctly.
+     retrieval" / "no live-API provenance is claimed" when the flag is set --
+     deliberately worded so `API_RETRIEVED` never appears in a synthetic
+     packet, letting the honesty test be a clean whole-packet substring ban
+     rather than relying on a human to parse a negation correctly.
    - **Section ledger** (`packet_export.py::_contract_facts_live_row`): the
      synthetic row is named "Contract Facts (SYNTHETIC example)" with a basis
      deliberately worded without the token "live" anywhere, so a reader (or a
@@ -138,3 +137,21 @@ resembling a real retrieval anywhere it appears.
   an `AppTest` driving the real widgets offline (handoff → Pull contract
   facts (live)) to confirm no `app.exception` and a populated, labeled
   render through the actual UI.
+
+## Amendment (2026-07-25)
+
+The same rule now covers every non-directory group rendered by
+`incumbent_leads.py` during a synthetic run: all use `SYNTHETIC_EXAMPLE`,
+never `API_RETRIEVED`. This includes a subaward group whose source URL and
+retrieval time differ from the Contract Facts because `_subaward_leads()`
+copies those fields from `SubawardsResult`; the Contract Facts flag governs
+the run's provenance label, not just an exact source-tuple match. The import
+of the canonical assurance remains deferred because a module-scope import
+forms the real `packet_export -> opportunity_packet -> incumbent_leads ->
+packet_export` initialization cycle.
+
+The remaining synthetic packet branches now label the Origin supersession,
+Eligibility gate, and Capture window from `synthetic_example`, while a
+whole-export sweep covers the rendered body, all eleven ledger rows, and the
+Source manifest so another section cannot silently restore a live-provenance
+claim.

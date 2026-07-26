@@ -31,3 +31,16 @@ def test_pilot_mode_truthy_values(monkeypatch):
         monkeypatch.setenv("TENS_HQ_PILOT_MODE", value)
         assert roles.pilot_mode_enabled() is False
         assert roles.allowed_pages() == PACKET_PAGES
+
+
+def test_case_ledger_truthiness(monkeypatch):
+    monkeypatch.delenv(roles.CASE_LEDGER_ENV, raising=False)
+    assert roles.case_ledger_enabled() is False
+
+    for value in ("", "0", "false", "FALSE", "no", "on"):
+        monkeypatch.setenv(roles.CASE_LEDGER_ENV, value)
+        assert roles.case_ledger_enabled() is False
+
+    for value in ("1", "true", "TRUE", "yes", "YES"):
+        monkeypatch.setenv(roles.CASE_LEDGER_ENV, value)
+        assert roles.case_ledger_enabled() is True

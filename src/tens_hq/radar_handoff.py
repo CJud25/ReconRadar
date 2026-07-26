@@ -365,6 +365,11 @@ RADAR_HANDOFF_LIVE_SUPERSEDES = (
     "differ from these snapshot claims, the live values govern."
 )
 
+RADAR_HANDOFF_SYNTHETIC_SUPERSEDES = (
+    "Bundled SYNTHETIC example Contract Facts are attached to this packet; "
+    "where they differ from these snapshot claims, the attached facts govern."
+)
+
 _NOT_IN_HANDOFF = "Not in handoff"
 _NOT_STATED_IN_HANDOFF = "Not stated in handoff"
 _SET_ASIDE_NOT_REPORTED = "not reported in snapshot (null)"
@@ -411,7 +416,12 @@ def _place_claim_text(place: RadarHandoffPlace | None) -> str:
     return ", ".join(_md(p) for p in parts)
 
 
-def radar_handoff_lines(handoff: RadarHandoff, *, live_facts_attached: bool) -> list[str]:
+def radar_handoff_lines(
+    handoff: RadarHandoff,
+    *,
+    live_facts_attached: bool,
+    synthetic_facts_attached: bool = False,
+) -> list[str]:
     """Render the Origin section as caveat-first Markdown lines (pure, §5).
 
     Every interpolation goes through :func:`_md`. No route, no directive, no
@@ -426,13 +436,15 @@ def radar_handoff_lines(handoff: RadarHandoff, *, live_facts_attached: bool) -> 
         "- This packet's target was handed off from a Radar snapshot dated "
         f"{_md(handoff.snapshot_date)}. Every value below is a claim from "
         "that snapshot — NOT packet evidence. Every fact this packet "
-        "asserts is either retrieved live with its own citation or "
-        "explicitly analyst-entered. The handoff never feeds the "
+        "asserts carries its own citation or is explicitly analyst-entered. "
+        "The handoff never feeds the "
         "Eligibility Gate or any other assessment.",
     ]
     if handoff.synthetic_sample:
         lines.append(f"- {RADAR_HANDOFF_SYNTHETIC_NOTE}")
-    if live_facts_attached:
+    if synthetic_facts_attached:
+        lines.append(f"- {RADAR_HANDOFF_SYNTHETIC_SUPERSEDES}")
+    elif live_facts_attached:
         lines.append(f"- {RADAR_HANDOFF_LIVE_SUPERSEDES}")
     source_text = _md(handoff.radar_source_label) if handoff.radar_source_label else ""
     lines.append(f"- Radar source: {source_text or _NOT_STATED_IN_HANDOFF}")
@@ -483,6 +495,7 @@ __all__ = [
     "RADAR_HANDOFF_LIVE_SUPERSEDES",
     "RADAR_HANDOFF_SCHEMA_VERSION",
     "RADAR_HANDOFF_SYNTHETIC_NOTE",
+    "RADAR_HANDOFF_SYNTHETIC_SUPERSEDES",
     "RadarHandoff",
     "RadarHandoffClaims",
     "RadarHandoffError",

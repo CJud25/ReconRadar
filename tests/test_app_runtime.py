@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 from pathlib import Path
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from tens_hq import bd_page as bd_page_module
 from tens_hq.case_store import CaseRepository
 from tens_hq.connectors import (
     AwardCandidate,
@@ -16,6 +14,7 @@ from tens_hq.connectors import (
     ContractFactsResolution,
     GeographyRecord,
 )
+from tens_hq.roles import CASE_LEDGER_ENV
 
 # The deterministic synthetic generator is CPU-heavy on this stack (tens of
 # seconds on Python 3.14 + pandas 3.0). app.py wraps it in load_demo_data via
@@ -135,37 +134,63 @@ def test_governance_page_describes_only_shipped_capabilities():
 
 
 def test_bd_page_lands_on_opportunity_packet_first():
-    # §15-#2 / §12.2 / §5.2 (Finding drift #3): the headline product used to
-    # sit behind an empty Cases landing tab. Reordering st.tabs so the packet
-    # is first makes it the surface Streamlit activates on first paint.
-    # `st.tabs` renders every tab body regardless of order in AppTest, so the
-    # render-present checks below are sanity only -- the two order assertions
-    # are the actual proof.
+    # §15-#2 / §12.2 / §5.2 (Finding drift #3): the headline product remains
+    # the first tab whether the optional case ledger is enabled or disabled.
     app_path = Path(__file__).resolve().parents[1] / "app.py"
     app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
     app.run()
     app.radio[0].set_value("BD Feasibility").run()
     assert not app.exception
 
-    # Primary (behavioral order): there is exactly one st.tabs call in
-    # src/tens_hq, so app.tabs is that single group in declaration order.
     assert app.tabs[0].label == "Opportunity Packet"
 
-    # Belt-and-suspenders (source-level, version-independent): pin the
-    # reorder directly against the st.tabs([...]) list literal.
-    source = Path(bd_page_module.__file__).read_text(encoding="utf-8")
-    match = re.search(r"st\.tabs\(\s*\[\s*\"([^\"]+)\"", source)
-    assert match is not None, "could not locate the st.tabs([...]) call in bd_page.py"
-    assert match.group(1) == "Opportunity Packet"
-
-    # Secondary (content still renders): packet subheader, R2a heading, and
-    # the no-score framing caption are all present somewhere on the page.
+    # The packet subheader, R2a heading, and no-score framing still render.
     subheaders = "\n".join(block.value for block in app.subheader)
     assert "Opportunity Packet" in subheaders
     packet_markdown = "\n".join(block.value for block in app.markdown)
     assert "## R2a determination-support map" in packet_markdown
     captions = "\n".join(block.value for block in app.caption)
     assert "never renders a score, ranking, or bid/no-bid recommendation" in captions
+
+
+def test_case_ledger_disabled_by_default_renders_only_packet_tab(monkeypatch):
+    monkeypatch.delenv(CASE_LEDGER_ENV, raising=False)
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+
+    assert not app.exception
+    assert [tab.label for tab in app.tabs] == ["Opportunity Packet"]
+
+
+def test_case_ledger_enabled_renders_all_six_tabs(monkeypatch):
+    monkeypatch.setenv(CASE_LEDGER_ENV, "1")
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+
+    assert not app.exception
+    assert [tab.label for tab in app.tabs] == [
+        "Opportunity Packet",
+        "Cases",
+        "New Case",
+        "Scan & Evidence",
+        "Verification",
+        "Assessment",
+    ]
+
+
+def test_packet_only_render_creates_no_sqlite_file(monkeypatch, tmp_path):
+    db_path = tmp_path / "packet-only.sqlite3"
+    monkeypatch.delenv(CASE_LEDGER_ENV, raising=False)
+    monkeypatch.setenv("TENS_HQ_DB_PATH", str(db_path))
+    app_path = Path(__file__).resolve().parents[1] / "app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=APP_TEST_TIMEOUT)
+    app.run()
+
+    assert not app.exception
+    assert [tab.label for tab in app.tabs] == ["Opportunity Packet"]
+    assert not db_path.exists()
 
 
 def test_guided_demo_navigation_is_callback_safe_and_resumes_from_query_params():
@@ -798,13 +823,14 @@ def test_pilot_mode_boots_with_packet_surface_only(monkeypatch):
     assert not any(button.key == "tour_next" for button in app.button)
 
 
-def test_scan_tab_offline_nib_npa_sample_checkbox_is_wired() -> None:
+def test_scan_tab_offline_nib_npa_sample_checkbox_is_wired(monkeypatch) -> None:
     # ADR-026 / §15-#6 / §5.4: the tracker's NIB/NPA lane must be demonstrable
     # offline. The Scan form only renders once a case exists (_case_select
     # returns None otherwise), so a case is seeded directly against the
     # session-scoped isolated ledger before the AppTest boots. This proves the
     # checkbox is wired without depending on -- or asserting -- an empty
     # ledger (a prior test in this session may already have seeded cases).
+    monkeypatch.setenv(CASE_LEDGER_ENV, "1")
     repository = CaseRepository(os.environ["TENS_HQ_DB_PATH"])
     try:
         repository.create_case("Denver NIB/NPA offline check", "Denver", "CO")

@@ -8,3 +8,4 @@ Retained ADR text may cite those archive-side ADRs or the out-of-repo `AGENTS.md
 ADR-003 remains because ADR-013 and `opportunity_packet.py` rely on its status-only eligibility boundary.
 ADR-027 records the EDGE gate-decision log kit, an append-only corpus of the team's own pursue/pass/watch calls, external to the packet.
 ADR-028 records the repo-model decision itself: why ReconRadar became the source of truth and the mirror/overlay process was retired.
+ADR-029 amends ADR-013 so every barred gate scopes the bar to the set-aside prime lane and names the separate FAR 8.7 mandatory-source lane as unassessed.

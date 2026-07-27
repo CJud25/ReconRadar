@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Barred eligibility-gate renders now name the AbilityOne mandatory-source lane (FAR 8.002/8.7) as a separate, unassessed lane and scope the bar to the set-aside prime lane (ADR-029).
 - The Opportunity Packet tab is now the landing surface on the BD page (first paint, no manual tab click), and the guided tour's packet beats were re-cut to describe the already-open packet instead of instructing the operator to open a tab it couldn't reach.
 - The Privacy & Governance page's "Decision boundaries" and "Data inventory" framing were corrected to describe only shipped capabilities (ADR-024); the page no longer references deleted concepts (site views, source scores, organization scenarios, small-sample shrinkage, the start-stage gate).
 - Cited source URLs (packet body and export manifest) render as clean autolinks instead of backslash-escaped Markdown, so a pasted citation resolves correctly.

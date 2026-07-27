@@ -70,8 +70,9 @@ evidence attaches. This is the operational version of `DEMO_SCRIPT.md` Act 2:
    obligated/ceiling figures read sensibly; they are cited with URL and
    retrieval time.
 3. **Eligibility gate**: reads the live set-aside. Blank = Unknown, never
-   "unrestricted". A barred gate still leaves the teaming lane — that
-   assessment is yours, not the tool's.
+   "unrestricted". A barred gate still leaves the teaming lane and the R2a
+   mandatory-source lane (FAR 8.7 Procurement-List addition) — those
+   assessments are yours, not the tool's.
 4. **Capture window**: an estimate band from owner-attested lead times.
    Confirm real lead times with the CNA/program before scheduling work
    against it. A negative runway (window already elapsed) is a real and

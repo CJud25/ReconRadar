@@ -175,3 +175,10 @@ def test_render_escapes_markdown_in_untrusted_raw_value() -> None:
 
     assert "](http://evil)" not in rendered
     assert "\\[x\\]\\(http://evil\\)" in rendered
+
+
+def test_md_flattens_newlines_in_untrusted_values() -> None:
+    rendered = _render("NONE\n# forged heading")
+
+    assert "\n# forged heading" not in rendered
+    assert "NONE # forged heading" in rendered

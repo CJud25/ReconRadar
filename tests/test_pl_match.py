@@ -185,6 +185,22 @@ def test_render_escapes_markdown_in_untrusted_values() -> None:
     assert "\\*\\*bold\\*\\*" in rendered
 
 
+def test_md_flattens_newlines_in_untrusted_values() -> None:
+    result = PLMatchResult(
+        city="Denver",
+        state="CO",
+        queried_service_type="Custodial",
+        source_label="Official PL\n# forged heading",
+        retrieved_at="2026-07-15",
+        synthetic_sample=False,
+        service_type_matches=(),
+        same_location_other=(),
+    )
+    rendered = "\n".join(pl_service_match_lines(result))
+    assert "\n# forged heading" not in rendered
+    assert "Official PL # forged heading" in rendered
+
+
 def test_provenance_fields_pass_through() -> None:
     result = find_pl_service_matches(
         _records(_ROWS),

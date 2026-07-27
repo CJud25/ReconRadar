@@ -149,7 +149,9 @@ class IncumbentLeads:
 #
 # A LOCAL copy, exactly like pl_match.py:221-227. incumbent_leads.py cannot
 # import ``_md`` from opportunity_packet: opportunity_packet imports THIS
-# module to render its section, so that import would be circular.
+# module to render its section, so that import would be circular. A line break
+# is itself structural injection; flatten every line boundary to a space before
+# escaping.
 
 _MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
 
@@ -157,7 +159,8 @@ _MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
 def _md(value: object) -> str:
     if value is None:
         return ""
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in str(value))
+    flat = " ".join(str(value).splitlines())
+    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
 
 
 def _reported(value: object) -> str:

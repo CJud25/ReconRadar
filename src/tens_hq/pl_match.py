@@ -224,7 +224,10 @@ _MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
 def _md(value: object) -> str:
     if value is None:
         return ""
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in str(value))
+    # A line break is itself structural injection; flatten every line boundary
+    # to a space before escaping.
+    flat = " ".join(str(value).splitlines())
+    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
 
 
 def _provenance_line(result: PLMatchResult) -> str:

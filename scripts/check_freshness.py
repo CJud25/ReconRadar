@@ -113,10 +113,9 @@ def main() -> int:
     args = _parse_args()
     today = args.today or date.today()
     findings = stale_facts(today)
-    stale_names = {finding.split(" is stale", 1)[0] for finding in findings}
 
     for fact in fact_registry():
-        status = "STALE" if fact.name in stale_names else "FRESH"
+        status = "STALE" if today > fact.deadline else "FRESH"
         print(f"{status}: {fact.name} (deadline {fact.deadline.isoformat()})")
     for finding in findings:
         print(f"ERROR: {finding}")

@@ -9,7 +9,8 @@ non-empty value is treated as a set-aside, including unrecognized codes.
 
 This module is pure (no Streamlit, network, or case-store imports).  Its
 renderer is caveat-first and escapes the raw analyst input before interpolating
-it into Markdown.
+it into Markdown. Barred renders name the unassessed FAR 8.7 mandatory-source
+lane.
 """
 
 from __future__ import annotations
@@ -81,6 +82,16 @@ ELIGIBILITY_PARTIAL_NOTE = (
     "This is a PARTIAL set-aside \u2014 only a portion of the work is reserved for "
     "the set-aside category. Whether an unrestricted remainder exists that an NPA "
     "could prime is a separate question not assessed here."
+)
+
+ELIGIBILITY_MANDATORY_SOURCE_LANE = (
+    "This bar closes the prime-as-a-set-aside lane only. A separate AbilityOne "
+    "mandatory-source lane (FAR 8.002 / FAR subpart 8.7) is NOT assessed here: "
+    "a requirement added to the Procurement List is a mandatory source; for "
+    "small-business set-asides that priority sits above the set-aside. How it "
+    "interacts with other set-aside families is likewise not assessed here. "
+    "Whether this requirement is on, or suitable for, the Procurement List is "
+    "not assessed by this gate — see the R2a determination-support map."
 )
 
 ELIGIBILITY_TEAMING_LANE = (
@@ -196,7 +207,7 @@ def _state_headline(state: EligibilityState) -> str:
         return "### UNKNOWN \u2014 verification required"
     if state is EligibilityState.UNRESTRICTED:
         return "### NO SET-ASIDE \u2014 eligibility-open (amber)"
-    return "### SET_ASIDE_BARRED"
+    return "### SET_ASIDE_BARRED (set-aside prime lane)"
 
 
 def _raw_set_aside_text(raw_set_aside: str | None) -> str:
@@ -241,6 +252,9 @@ def eligibility_gate_lines(
         # so the barred rationale must not read as closing the whole opportunity.
         if gate.set_aside_label and "Partial" in gate.set_aside_label:
             lines.append(f"- {ELIGIBILITY_PARTIAL_NOTE}")
+        # AbilityOne NPAs need the separate R2a lane named so the set-aside bar
+        # cannot read as closing that unassessed path (finding A1, ADR-029).
+        lines.append(f"- {ELIGIBILITY_MANDATORY_SOURCE_LANE}")
         lines.append(f"- {ELIGIBILITY_TEAMING_LANE}")
 
     lines.append("")
@@ -270,6 +284,7 @@ __all__ = [
     "ELIGIBILITY_BARRED_BUY_INDIAN",
     "ELIGIBILITY_BARRED_UNVERIFIED",
     "ELIGIBILITY_GATE_HEADER",
+    "ELIGIBILITY_MANDATORY_SOURCE_LANE",
     "ELIGIBILITY_PARTIAL_NOTE",
     "ELIGIBILITY_PRESENTS_NOT_DETERMINES",
     "ELIGIBILITY_SET_ASIDE_BARRED",

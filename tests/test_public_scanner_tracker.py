@@ -10,7 +10,7 @@ from openpyxl import Workbook
 from tens_hq.case_store import CaseRepository, CaseStoreError
 from tens_hq.cases import CaseState, CaseValidationError, ensure_transition
 from tens_hq.connectors import SourceKind, parse_workbook
-from tens_hq.scanner import ScanFailure, ScanStatus, WorkbookScanner
+from tens_hq.scanner import ScanFailure, ScanRunStatus, WorkbookScanner
 
 
 def _services_workbook() -> bytes:
@@ -85,7 +85,7 @@ def test_scan_persists_evidence_and_requires_explicit_validation(tmp_path) -> No
             retrieved_at=when,
         )
 
-        assert result.status is ScanStatus.SUCCEEDED
+        assert result.status is ScanRunStatus.SUCCEEDED
         assert repository.require_case(case.case_id).state is CaseState.NEEDS_VERIFICATION
         resource = repository.list_resources(case.case_id, current_only=True)[0]
         assert resource.payload["agency_name"] == "Agency A"
@@ -128,13 +128,13 @@ def test_failed_newer_scan_preserves_rows_and_blocks_until_retry(tmp_path) -> No
         assert WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, good, "nib.xlsx").ok
 
         failed = WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, b"not an xlsx", "nib.xlsx")
-        assert failed.status is ScanStatus.FAILED
+        assert failed.status is ScanRunStatus.FAILED
         assert len(repository.list_resources(case.case_id, current_only=True)) == 1
         open_failures = repository.list_tasks(case.case_id, open_only=True)
         assert any(task.task_type == "SCAN_FAILED" for task in open_failures)
 
         retried = WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, good, "nib.xlsx")
-        assert retried.status is ScanStatus.SUCCEEDED
+        assert retried.status is ScanRunStatus.SUCCEEDED
         assert not any(task.task_type == "SCAN_FAILED" and task.status.value == "open" for task in repository.list_tasks(case.case_id))
     finally:
         repository.close()
@@ -149,7 +149,7 @@ def test_partial_service_scan_keeps_unparsed_row_and_opens_blocker(tmp_path) -> 
             [["CNA A", "Janitorial", "Denver, CO 80202", "Yes"], ["CNA B", "Other", "unknown", "No"]],
         )
         result = WorkbookScanner(repository).run_scan(case.case_id, SourceKind.ABILITYONE_SERVICES, services, "services.xlsx")
-        assert result.status is ScanStatus.PARTIAL
+        assert result.status is ScanRunStatus.PARTIAL
         assert result.unparsed_rows == 1
         # The malformed/unparsed row is quarantined; the latest partial
         # snapshot defines current evidence and therefore does not carry
@@ -168,10 +168,10 @@ def test_partial_scan_surfaces_disappearance_without_deactivating_prior_row(tmp_
     try:
         case = repository.create_case("Denver partial", "Denver", "CO")
         first = _nib([["Agency A", "Denver", "CO", "80202"], ["Agency B", "Denver", "CO", "80203"]])
-        assert WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, first, "first.xlsx").status is ScanStatus.SUCCEEDED
+        assert WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, first, "first.xlsx").status is ScanRunStatus.SUCCEEDED
         second = _nib([["Agency A", "Denver", "CO", "80202"], [None, "Denver", "CO", "80203"]])
         result = WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, second, "partial.xlsx")
-        assert result.status is ScanStatus.PARTIAL
+        assert result.status is ScanRunStatus.PARTIAL
         assert {item.payload["agency_name"] for item in repository.list_resources(case.case_id, current_only=True)} == {"Agency A"}
         tasks = repository.list_tasks(case.case_id, open_only=True)
         assert any(task.task_type == "SOURCE_RECORD_DISAPPEARED" for task in tasks)
@@ -207,7 +207,7 @@ def test_state_identifiable_unparsed_service_is_broad_candidate_not_local_proof(
             [["CNA statewide", "Janitorial", "CO (statewide)", "No"]],
         )
         result = WorkbookScanner(repository).run_scan(case.case_id, SourceKind.ABILITYONE_SERVICES, services, "services.xlsx")
-        assert result.status is ScanStatus.PARTIAL
+        assert result.status is ScanRunStatus.PARTIAL
         resources = repository.list_resources(case.case_id, source_kind=SourceKind.ABILITYONE_SERVICES.value, current_only=True)
         assert len(resources) == 1
         assert resources[0].payload["location_parse_status"] == "UNPARSED"
@@ -241,7 +241,7 @@ def test_scan_scopes_national_directory_to_exact_case_location(tmp_path) -> None
             ]
         )
         result = WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, workbook, "national.xlsx")
-        assert result.status is ScanStatus.SUCCEEDED
+        assert result.status is ScanRunStatus.SUCCEEDED
         assert result.record_count == 1
         current = repository.list_resources(case.case_id, current_only=True)
         assert [item.payload["agency_name"] for item in current] == ["Agency A"]
@@ -262,17 +262,17 @@ def test_idempotency_is_case_scoped_and_failed_keys_can_retry(tmp_path) -> None:
         scanner = WorkbookScanner(repository)
         initial = scanner.run_scan(first.case_id, SourceKind.NIB_NPA, workbook, "original.xlsx", idempotency_key="same-key")
         replay = scanner.run_scan(first.case_id, SourceKind.NIB_NPA, workbook, "renamed.xlsx", idempotency_key="same-key")
-        assert initial.status is ScanStatus.SUCCEEDED
-        assert replay.status is ScanStatus.IDEMPOTENT_REPLAY
+        assert initial.status is ScanRunStatus.SUCCEEDED
+        assert replay.status is ScanRunStatus.IDEMPOTENT_REPLAY
         assert len(repository.list_scans(first.case_id)) == 1
 
         failed = scanner.run_scan(first.case_id, SourceKind.NIB_NPA, b"not xlsx", "bad.xlsx", idempotency_key="retry-key")
         retried = scanner.run_scan(first.case_id, SourceKind.NIB_NPA, workbook, "good.xlsx", idempotency_key="retry-key")
-        assert failed.status is ScanStatus.FAILED
-        assert retried.status is ScanStatus.SUCCEEDED
+        assert failed.status is ScanRunStatus.FAILED
+        assert retried.status is ScanRunStatus.SUCCEEDED
 
         other_case = WorkbookScanner(repository).run_scan(second.case_id, SourceKind.NIB_NPA, workbook, "second.xlsx", idempotency_key="same-key")
-        assert other_case.status is ScanStatus.SUCCEEDED
+        assert other_case.status is ScanRunStatus.SUCCEEDED
     finally:
         repository.close()
 
@@ -288,12 +288,12 @@ def test_idempotency_key_rejects_payload_conflict_and_replay_uses_persisted_meta
         scanner = WorkbookScanner(repository, clock=lambda: base)
         original = scanner.run_scan(case.case_id, SourceKind.NIB_NPA, first, "original.xlsx", idempotency_key="bound-key", retrieved_at=first_time)
         replay = scanner.run_scan(case.case_id, SourceKind.NIB_NPA, first, "renamed.xlsx", idempotency_key="bound-key", retrieved_at="2026-07-18T13:00:00Z")
-        assert replay.status is ScanStatus.IDEMPOTENT_REPLAY
+        assert replay.status is ScanRunStatus.IDEMPOTENT_REPLAY
         assert replay.metadata["workbook_sha256"] == original.metadata["workbook_sha256"]
         assert replay.metadata["source_label"] == "original.xlsx"
         assert replay.retrieved_at == original.retrieved_at
         conflict = scanner.run_scan(case.case_id, SourceKind.NIB_NPA, second, "different.xlsx", idempotency_key="bound-key", retrieved_at=first_time)
-        assert conflict.status is ScanStatus.FAILED
+        assert conflict.status is ScanRunStatus.FAILED
         assert conflict.error_code == "IDEMPOTENCY"
         assert len(repository.list_scans(case.case_id)) == 1
     finally:
@@ -310,9 +310,9 @@ def test_successful_idempotency_receipt_replays_after_newer_source_scan(tmp_path
         initial = scanner.run_scan(case.case_id, SourceKind.NIB_NPA, first, "a.xlsx", idempotency_key="receipt-key")
         newer = scanner.run_scan(case.case_id, SourceKind.NIB_NPA, expanded, "b.xlsx", idempotency_key="new-key")
         replay = scanner.run_scan(case.case_id, SourceKind.NIB_NPA, first, "renamed-a.xlsx", idempotency_key="receipt-key")
-        assert initial.status is ScanStatus.SUCCEEDED
-        assert newer.status is ScanStatus.SUCCEEDED
-        assert replay.status is ScanStatus.IDEMPOTENT_REPLAY
+        assert initial.status is ScanRunStatus.SUCCEEDED
+        assert newer.status is ScanRunStatus.SUCCEEDED
+        assert replay.status is ScanRunStatus.IDEMPOTENT_REPLAY
         assert replay.run_id == initial.run_id
         assert len(repository.list_scans(case.case_id)) == 2
         assert {item.payload["agency_name"] for item in repository.list_resources(case.case_id, current_only=True)} == {"Agency A", "Agency B"}
@@ -338,7 +338,7 @@ def test_failed_rescan_never_restores_validated_state(tmp_path) -> None:
         repository.resolve_route(route.hypothesis_id, "resolved", rationale="Official source reviewed", source_label="AbilityOne Procurement List")
         assert repository.validate_case(case.case_id).state is CaseState.VALIDATED
         failed = WorkbookScanner(repository).run_scan(case.case_id, SourceKind.NIB_NPA, b"not xlsx", "nib.xlsx")
-        assert failed.status is ScanStatus.FAILED
+        assert failed.status is ScanRunStatus.FAILED
         assert repository.require_case(case.case_id).state is CaseState.NEEDS_VERIFICATION
     finally:
         repository.close()
@@ -682,7 +682,7 @@ def test_old_workbook_uploaded_today_is_not_fresh(tmp_path) -> None:
             "old.xlsx",
             retrieved_at=old_retrieval,
         )
-        assert result.status is ScanStatus.SUCCEEDED
+        assert result.status is ScanRunStatus.SUCCEEDED
         assessment = repository.compute_readiness(case.case_id)
         states = {item.key: item.state.value for item in assessment.items}
         assert states["current_import"] == "needs_verification"

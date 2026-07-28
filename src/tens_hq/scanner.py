@@ -3,22 +3,20 @@
 ``run_scan`` is intentionally a small application service: validate the
 source boundary, open exactly one connector, persist normalized records, and
 reconcile disappearance only after a successful parse.  Repository calls are
-kept behind a narrow protocol and feature-detected for the in-progress
-case-store implementation, so a parser failure cannot mutate prior evidence.
+kept behind the concrete case-store contract, so a parser failure cannot
+mutate prior evidence.
 """
 
 from __future__ import annotations
 
-import inspect
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from hashlib import sha256
 from typing import Any, Callable, Mapping, Sequence
-from uuid import uuid4
 
 from .connectors import (
-    CaseRepository,
+    CaseRepositoryProtocol,
     ConnectorError,
     ConnectorResult,
     NormalizedRecord,
@@ -33,7 +31,7 @@ from .connectors import (
 from .connectors.base import utc_now
 
 
-class ScanStatus(str, Enum):
+class ScanRunStatus(str, Enum):
     SUCCEEDED = "SUCCEEDED"
     PARTIAL = "PARTIAL"
     FAILED = "FAILED"
@@ -45,7 +43,7 @@ class ScanResult:
     case_id: str
     run_id: str | None
     source_kind: SourceKind
-    status: ScanStatus
+    status: ScanRunStatus
     retrieved_at: datetime | None
     source_label: str | None = None
     record_count: int = 0
@@ -64,11 +62,11 @@ class ScanResult:
 
     @property
     def ok(self) -> bool:
-        return self.status in {ScanStatus.SUCCEEDED, ScanStatus.PARTIAL, ScanStatus.IDEMPOTENT_REPLAY}
+        return self.status in {ScanRunStatus.SUCCEEDED, ScanRunStatus.PARTIAL, ScanRunStatus.IDEMPOTENT_REPLAY}
 
     @property
     def partial(self) -> bool:
-        return self.status is ScanStatus.PARTIAL
+        return self.status is ScanRunStatus.PARTIAL
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
@@ -150,58 +148,11 @@ def _retrieved_at(value: Any, clock: Callable[[], datetime]) -> datetime | None:
     return normalized
 
 
-def _extract_run_id(run: Any) -> str | None:
-    if run is None:
-        return None
-    if isinstance(run, str):
-        return run
-    if isinstance(run, Mapping):
-        for key in ("run_id", "id", "scan_id"):
-            if run.get(key):
-                return str(run[key])
+def _cached_run_id(value: Mapping[str, Any]) -> str | None:
     for key in ("run_id", "id", "scan_id"):
-        value = getattr(run, key, None)
-        if value:
-            return str(value)
+        if value.get(key):
+            return str(value[key])
     return None
-
-
-def _run_value(run: Any, key: str, default: Any = None) -> Any:
-    """Read persisted run metadata from either a dataclass or mapping."""
-
-    if isinstance(run, Mapping):
-        return run.get(key, default)
-    return getattr(run, key, default)
-
-
-def _safe_repo_counts(value: Any) -> dict[str, int]:
-    """Extract optional reconciliation counters without exposing repo errors."""
-
-    if value is None:
-        return {}
-    source: Mapping[str, Any] | None = value if isinstance(value, Mapping) else None
-    if source is None:
-        source = {
-            key: getattr(value, key)
-            for key in ("added", "added_count", "changed", "changed_count", "unchanged", "unchanged_count", "disappeared", "disappeared_count")
-            if hasattr(value, key)
-        }
-    output: dict[str, int] = {}
-    aliases = {
-        "added_count": ("added_count", "added"),
-        "changed_count": ("changed_count", "changed"),
-        "unchanged_count": ("unchanged_count", "unchanged"),
-        "disappeared_count": ("disappeared_count", "disappeared"),
-    }
-    for destination, names in aliases.items():
-        for name in names:
-            candidate = source.get(name) if source else None
-            if isinstance(candidate, bool):
-                continue
-            if isinstance(candidate, int):
-                output[destination] = max(0, candidate)
-                break
-    return output
 
 
 class WorkbookScanner:
@@ -209,7 +160,7 @@ class WorkbookScanner:
 
     def __init__(
         self,
-        repository: CaseRepository | Any,
+        repository: CaseRepositoryProtocol,
         *,
         clock: Callable[[], datetime] = utc_now,
         idempotency: Any | None = None,
@@ -294,7 +245,7 @@ class WorkbookScanner:
                             case_id=safe_case,
                             run_id=cached.run_id,
                             source_kind=kind,
-                            status=ScanStatus.FAILED,
+                            status=ScanRunStatus.FAILED,
                             retrieved_at=when,
                             error_code="IDEMPOTENCY",
                             message=ConnectorError._MESSAGES["IDEMPOTENCY"],
@@ -304,7 +255,7 @@ class WorkbookScanner:
                     return ScanResult(
                         **{
                             **asdict(cached),
-                            "status": ScanStatus.IDEMPOTENT_REPLAY,
+                            "status": ScanRunStatus.IDEMPOTENT_REPLAY,
                         }
                     )
                 # A repository may return a serialized result from a durable
@@ -315,9 +266,9 @@ class WorkbookScanner:
                         if cached_hash and cached_hash != workbook_sha256:
                             return ScanResult(
                                 case_id=safe_case,
-                                run_id=_extract_run_id(cached),
+                                run_id=_cached_run_id(cached),
                                 source_kind=kind,
-                                status=ScanStatus.FAILED,
+                                status=ScanRunStatus.FAILED,
                                 retrieved_at=when,
                                 error_code="IDEMPOTENCY",
                                 message=ConnectorError._MESSAGES["IDEMPOTENCY"],
@@ -326,9 +277,9 @@ class WorkbookScanner:
                             )
                         return ScanResult(
                             case_id=str(cached.get("case_id", safe_case)),
-                            run_id=_extract_run_id(cached),
+                            run_id=_cached_run_id(cached),
                             source_kind=coerce_source_kind(cached.get("source_kind", kind)),
-                            status=ScanStatus.IDEMPOTENT_REPLAY,
+                            status=ScanRunStatus.IDEMPOTENT_REPLAY,
                             retrieved_at=_retrieved_at(cached.get("retrieved_at"), self.clock),
                             source_label=cached.get("source_label"),
                             record_count=int(cached.get("record_count", 0)),
@@ -342,41 +293,41 @@ class WorkbookScanner:
         run_id: str | None = None
         try:
             run = self._start_scan(safe_case, kind, key, snapshot, workbook_sha256, expected_version)
-            run_id = _extract_run_id(run) or str(uuid4())
-            existing_status = str(getattr(run, "status", run.get("status") if isinstance(run, Mapping) else "")).casefold()
+            run_id = run.scan_id
+            existing_status = run.status.casefold()
             if existing_status in {"succeeded", "partial"}:
                 # The durable repository recognized an idempotent terminal
                 # request.  Do not parse or write a second snapshot.
-                persisted_retrieved = _retrieved_at(_run_value(run, "retrieved_at"), self.clock)
-                persisted_source_label = _run_value(run, "source_label")
-                persisted_key = _run_value(run, "idempotency_key") or key
-                persisted_hash = _run_value(run, "workbook_sha256") or workbook_sha256
-                persisted_uri = _run_value(run, "source_uri") or snapshot.get("source_uri")
-                persisted_schema = _run_value(run, "schema_fingerprint") or schema_fingerprint
+                persisted_retrieved = _retrieved_at(run.retrieved_at, self.clock)
+                persisted_source_label = run.source_label
+                persisted_key = run.idempotency_key or key
+                persisted_hash = run.workbook_sha256 or workbook_sha256
+                persisted_uri = run.source_uri or snapshot.get("source_uri")
+                persisted_schema = run.schema_fingerprint or schema_fingerprint
                 return ScanResult(
                     case_id=safe_case,
                     run_id=run_id,
                     source_kind=kind,
-                    status=ScanStatus.IDEMPOTENT_REPLAY,
+                    status=ScanRunStatus.IDEMPOTENT_REPLAY,
                     retrieved_at=persisted_retrieved,
                     source_label=persisted_source_label,
-                    record_count=int(_run_value(run, "row_count", 0) or 0),
+                    record_count=int(run.row_count or 0),
                     idempotency_key=persisted_key,
-                    excluded_row_count=int(_run_value(run, "excluded_row_count", 0) or 0),
+                    excluded_row_count=int(run.excluded_row_count or 0),
                     metadata={
                         "source_kind": kind.value,
                         "source_uri": persisted_uri,
                         "source_label": persisted_source_label,
-                        "source_version": _run_value(run, "source_version"),
-                        "assurance": _run_value(run, "assurance"),
+                        "source_version": run.source_version,
+                        "assurance": run.assurance,
                         "retrieved_at": persisted_retrieved.isoformat() if persisted_retrieved else None,
-                        "actor_role": _run_value(run, "actor_role"),
+                        "actor_role": run.actor_role,
                         "workbook_sha256": persisted_hash,
-                        "byte_size": _run_value(run, "byte_size"),
+                        "byte_size": run.byte_size,
                         "schema_fingerprint": persisted_schema,
                         "payload_retained": False,
-                        "source_row_count": _run_value(run, "source_row_count", _run_value(run, "row_count", 0)),
-                        "excluded_row_count": int(_run_value(run, "excluded_row_count", 0) or 0),
+                        "source_row_count": run.source_row_count if run.source_row_count is not None else run.row_count,
+                        "excluded_row_count": int(run.excluded_row_count or 0),
                         "scan_status": existing_status,
                     },
                 )
@@ -386,18 +337,16 @@ class WorkbookScanner:
             result: ConnectorResult = connector.parse(workbook_bytes, metadata=metadata)
             # Do not retain caller-owned bytes beyond parsing.
             workbook_bytes = b""
-            # The native case store keeps this handoff in memory and performs
-            # persistence/reconciliation atomically in _finalize.  Protocol
-            # repositories persist and reconcile through their own methods.
+            # The case store keeps this handoff in memory and performs
+            # persistence/reconciliation atomically in _finalize.
             scoped_records, excluded_records = self._scope_records(safe_case, kind, result.records)
             excluded_row_count = len(excluded_records)
             self._persist_records(run_id, scoped_records)
             counts = self._reconcile(run_id, kind, scoped_records)
-            self._create_downstream(run_id, safe_case, kind, scoped_records)
             # A clean parse that omits a previously current row is not a
             # clean reconciliation: it requires the same blocking review as
             # other partial/anomalous imports.
-            status = ScanStatus.PARTIAL if result.partial or counts.get("disappeared_count", 0) else ScanStatus.SUCCEEDED
+            status = ScanRunStatus.PARTIAL if result.partial or counts.get("disappeared_count", 0) else ScanRunStatus.SUCCEEDED
             details = {
                 "source_kind": kind.value,
                 "record_count": len(scoped_records),
@@ -433,7 +382,7 @@ class WorkbookScanner:
                 metadata={**snapshot, "source_row_count": result.scanned_rows, "excluded_row_count": excluded_row_count, **counts},
                 **counts,
             )
-            if cache_key and status is ScanStatus.SUCCEEDED:
+            if cache_key and status is ScanRunStatus.SUCCEEDED:
                 try:
                     self.idempotency.put(cache_key, output)
                 except Exception:
@@ -446,7 +395,7 @@ class WorkbookScanner:
             if run_id:
                 self._finalize(
                     run_id,
-                    ScanStatus.FAILED.value,
+                    ScanRunStatus.FAILED.value,
                     {
                         "source_kind": kind.value,
                         "record_count": 0,
@@ -458,7 +407,7 @@ class WorkbookScanner:
                 case_id=safe_case,
                 run_id=run_id,
                 source_kind=kind,
-                status=ScanStatus.FAILED,
+                status=ScanRunStatus.FAILED,
                 retrieved_at=when,
                 source_label=source_label,
                 error_code=exc.code,
@@ -473,7 +422,7 @@ class WorkbookScanner:
             if run_id:
                 self._finalize(
                     run_id,
-                    ScanStatus.FAILED.value,
+                    ScanRunStatus.FAILED.value,
                     {
                         "source_kind": kind.value,
                         "record_count": 0,
@@ -485,7 +434,7 @@ class WorkbookScanner:
                 case_id=safe_case,
                 run_id=run_id,
                 source_kind=kind,
-                status=ScanStatus.FAILED,
+                status=ScanRunStatus.FAILED,
                 retrieved_at=when,
                 source_label=source_label,
                 error_code="REPOSITORY",
@@ -493,22 +442,6 @@ class WorkbookScanner:
                 idempotency_key=key,
                 metadata=snapshot,
             )
-
-    # Public aliases used by lightweight integrations.
-    scan = run_scan
-    run = run_scan
-
-    def _native_repository(self) -> bool:
-        """Whether the concrete repository exposes case_store's atomic API."""
-
-        method = getattr(self.repository, "finalize_scan", None)
-        if method is None:
-            return False
-        try:
-            parameters = inspect.signature(method).parameters
-        except (TypeError, ValueError):
-            return False
-        return "rows" in parameters and "success" in parameters
 
     @staticmethod
     def _native_rows(records: Sequence[NormalizedRecord]) -> tuple[dict[str, Any], ...]:
@@ -602,180 +535,75 @@ class WorkbookScanner:
         workbook_sha256: str,
         expected_version: int | None,
     ) -> Any:
-        method = getattr(self.repository, "start_scan", None)
-        if method is None:
-            raise ScanFailure("REPOSITORY")
-        try:
-            parameters = inspect.signature(method).parameters
-        except (TypeError, ValueError):
-            parameters = {}
-        # Native case_store reserves a run by workbook metadata and performs
+        # The case store reserves a run by workbook metadata and performs
         # persistence/reconciliation atomically in finalize_scan.
-        if "workbook_name" in parameters or "workbook_sha256" in parameters:
-            workbook_name = str(snapshot.get("source_label") or "uploaded_workbook.xlsx")
-            kwargs: dict[str, Any] = {
-                "workbook_sha256": workbook_sha256,
-                "expected_version": expected_version,
-            }
-            if "idempotency_key" in parameters:
-                kwargs["idempotency_key"] = key
-            if "snapshot" in parameters:
-                kwargs["snapshot"] = dict(snapshot)
-            if "source_uri" in parameters:
-                kwargs["source_uri"] = snapshot.get("source_uri")
-            try:
-                try:
-                    return method(case_id, kind.value, workbook_name, **kwargs)
-                except TypeError:
-                    # Older protocol implementations may not accept all
-                    # optional provenance fields; retain the strict
-                    # positional contract.
-                    reduced = {k: v for k, v in kwargs.items() if k in {"workbook_sha256", "expected_version"}}
-                    return method(case_id, kind.value, workbook_name, **reduced)
-            except Exception as exc:
-                if getattr(exc, "code", None) == "IDEMPOTENCY":
-                    raise ScanFailure("IDEMPOTENCY") from None
-                raise
+        workbook_name = str(snapshot.get("source_label") or "uploaded_workbook.xlsx")
         try:
-            return method(case_id, kind, key, snapshot)
-        except TypeError:
-            try:
-                return method(case_id=case_id, source_kind=kind, idempotency_key=key, snapshot=snapshot)
-            except TypeError:
-                # A store may use the string enum value at a serialization
-                # boundary; support that shape without broad exception detail.
-                return method(case_id, kind.value, key, snapshot)
+            return self.repository.start_scan(
+                case_id,
+                kind.value,
+                workbook_name,
+                workbook_sha256=workbook_sha256,
+                source_uri=snapshot.get("source_uri"),
+                idempotency_key=key,
+                snapshot=dict(snapshot),
+                expected_version=expected_version,
+            )
+        except Exception as exc:
+            if getattr(exc, "code", None) == "IDEMPOTENCY":
+                raise ScanFailure("IDEMPOTENCY") from None
+            raise
 
-    def _persist_records(self, run_id: str, records: Sequence[NormalizedRecord]) -> Any:
-        method = getattr(self.repository, "persist_source_records", None)
-        if method is None:
-            method = getattr(self.repository, "persist_records", None)
-        if method is None:
-            # The native SQLite repository commits normalized records in its
-            # atomic finalize_scan transaction.  Keep the parser handoff
-            # short-lived in memory; a crash leaves only the durable running
-            # marker for startup recovery.
-            self._pending_records[run_id] = tuple(records)
-            return None
-        try:
-            value = method(run_id, records)
-        except TypeError:
-            value = method(run_id=run_id, records=records)
+    def _persist_records(self, run_id: str, records: Sequence[NormalizedRecord]) -> None:
+        # Keep the parser handoff short-lived in memory for the atomic
+        # finalize_scan transaction.  A crash leaves only the durable running
+        # marker for startup recovery.
         self._pending_records[run_id] = tuple(records)
-        return value
 
     def _reconcile(self, run_id: str, kind: SourceKind, records: Sequence[NormalizedRecord]) -> dict[str, int]:
-        method = getattr(self.repository, "reconcile_source", None)
-        if method is None:
-            # The native SQLite repository reconciles inside finalize_scan.
-            # Expose non-mutating counters here so the scanner result remains
-            # useful without duplicating that transaction.
-            list_resources = getattr(self.repository, "list_resources", None)
-            get_scan = getattr(self.repository, "get_scan", None)
-            if list_resources is None or get_scan is None:
-                raise ScanFailure("REPOSITORY")
-            try:
-                scan = get_scan(run_id)
-                if scan is None:
-                    raise ScanFailure("REPOSITORY")
-                prior = list_resources(scan.case_id, source_kind=kind.value, current_only=True)
-                prior_hashes = {str(getattr(item, "row_hash", "")) for item in prior}
-                observed = {str(record.row_hash) for record in records}
-                return {
-                    "added_count": len(observed - prior_hashes),
-                    "changed_count": 0,
-                    "unchanged_count": len(observed & prior_hashes),
-                    "disappeared_count": len(prior_hashes - observed),
-                }
-            except ScanFailure:
-                raise
-            except Exception:
-                raise ScanFailure("REPOSITORY") from None
-        hashes = tuple(record.row_hash for record in records)
+        # The repository reconciles inside finalize_scan.  Expose non-mutating
+        # counters here so the scanner result remains useful without
+        # duplicating that transaction.
         try:
-            value = method(run_id, kind, hashes)
-        except TypeError:
-            try:
-                value = method(run_id=run_id, source_kind=kind, observed_hashes=hashes)
-            except TypeError:
-                value = method(run_id, kind.value, hashes)
-        return _safe_repo_counts(value)
-
-    def _create_downstream(self, run_id: str, case_id: str, kind: SourceKind, records: Sequence[NormalizedRecord]) -> None:
-        # Case resources/tasks/events are optional repository projections.  If
-        # present, they are fed normalized records only; if absent the source
-        # snapshot remains fully usable through persist_source_records.
-        for name in ("create_case_resources", "create_resources"):
-            method = getattr(self.repository, name, None)
-            if method is not None:
-                try:
-                    method(run_id, records)
-                except TypeError:
-                    method(case_id=case_id, run_id=run_id, records=records)
-                break
-        for name in ("create_case_tasks", "create_tasks"):
-            method = getattr(self.repository, name, None)
-            if method is not None:
-                try:
-                    method(run_id, records)
-                except TypeError:
-                    method(case_id=case_id, run_id=run_id, records=records)
-                break
-        for name in ("create_case_events", "create_events"):
-            method = getattr(self.repository, name, None)
-            if method is not None:
-                try:
-                    method(run_id, records)
-                except TypeError:
-                    method(case_id=case_id, run_id=run_id, records=records)
-                break
+            scan = self.repository.get_scan(run_id)
+            if scan is None:
+                raise ScanFailure("REPOSITORY")
+            prior = self.repository.list_resources(scan.case_id, source_kind=kind.value, current_only=True)
+            prior_hashes = {str(item.row_hash) for item in prior}
+            observed = {str(record.row_hash) for record in records}
+            return {
+                "added_count": len(observed - prior_hashes),
+                "changed_count": 0,
+                "unchanged_count": len(observed & prior_hashes),
+                "disappeared_count": len(prior_hashes - observed),
+            }
+        except ScanFailure:
+            raise
+        except Exception:
+            raise ScanFailure("REPOSITORY") from None
 
     def _finalize(self, run_id: str, status: str, details: Mapping[str, Any]) -> Any:
-        method = getattr(self.repository, "finalize_scan", None)
-        if method is None:
-            raise ScanFailure("REPOSITORY")
-
         pending = self._pending_records.pop(run_id, ())
-        if self._native_repository():
-            rows = self._native_rows(pending)
-            if status == ScanStatus.FAILED.value:
-                fail = getattr(self.repository, "fail_scan", None)
-                if fail is not None:
-                    try:
-                        return fail(run_id, details.get("message") or "scan failed")
-                    except TypeError:
-                        return fail(scan_id=run_id, error_message=details.get("message") or "scan failed")
-                return method(run_id, rows, success=False, error_message=details.get("message") or "scan failed")
+        rows = self._native_rows(pending)
+        if status == ScanRunStatus.FAILED.value:
+            return self.repository.fail_scan(run_id, details.get("message") or "scan failed")
 
-            kwargs: dict[str, Any] = {
-                "success": True,
-                "status": status.casefold(),
-                "schema_fingerprint": details.get("schema_fingerprint"),
-                "source_row_count": int(details.get("source_row_count", details.get("record_count", len(rows)))),
-                "excluded_row_count": int(details.get("excluded_row_count", 0)),
-                "unparsed_rows": int(details.get("unparsed_rows", 0)),
-                "rejected_rows": int(details.get("rejected_rows", 0)),
-                "excluded_records": tuple(details.get("excluded_records") or ()),
-            }
-            # New native repositories receive the entire snapshot/result
-            # contract atomically.  The fallback keeps compatibility with the
-            # original finalize signature used by small integrations.
-            try:
-                return method(run_id, rows, **kwargs)
-            except TypeError:
-                return method(run_id, rows, success=True, schema_fingerprint=details.get("schema_fingerprint"))
-
-        try:
-            return method(run_id, status, **dict(details))
-        except TypeError:
-            try:
-                return method(run_id=run_id, status=status, details=dict(details))
-            except TypeError:
-                return method(run_id, status, dict(details))
+        return self.repository.finalize_scan(
+            run_id,
+            rows,
+            success=True,
+            status=status.casefold(),
+            schema_fingerprint=details.get("schema_fingerprint"),
+            source_row_count=int(details.get("source_row_count", details.get("record_count", len(rows)))),
+            excluded_row_count=int(details.get("excluded_row_count", 0)),
+            unparsed_rows=int(details.get("unparsed_rows", 0)),
+            rejected_rows=int(details.get("rejected_rows", 0)),
+            excluded_records=tuple(details.get("excluded_records") or ()),
+        )
 
 
 def run_scan(
-    repository: CaseRepository | Any,
+    repository: CaseRepositoryProtocol,
     case_id: str,
     source_kind: SourceKind | str,
     workbook_bytes: bytes | bytearray | memoryview,
@@ -799,16 +627,11 @@ def run_scan(
         expected_version,
     )
 
-
-Scanner = WorkbookScanner
-
-
 __all__ = [
     "MemoryIdempotencyStore",
     "ScanFailure",
     "ScanResult",
-    "ScanStatus",
-    "Scanner",
+    "ScanRunStatus",
     "WorkbookScanner",
     "run_scan",
 ]

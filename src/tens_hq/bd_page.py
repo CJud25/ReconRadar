@@ -47,7 +47,7 @@ from .packet_export import (
 from .pl_match import find_pl_service_matches
 from .radar_handoff import RadarHandoffError, parse_radar_handoff
 from .roles import case_ledger_enabled
-from .scanner import ScanStatus, WorkbookScanner
+from .scanner import ScanRunStatus, WorkbookScanner
 from .staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 
 # Packet-path `except Exception:` handlers log here before showing a public
@@ -345,11 +345,11 @@ def _render_scan(repo: CaseRepository) -> None:
                 actor_role=actor_role,
                 retrieved_at=retrieved_at.strip() or None,
             )
-            if result.status is ScanStatus.FAILED:
+            if result.status is ScanRunStatus.FAILED:
                 st.error(f"Scan failed: {result.message or 'The workbook could not be processed.'}")
-            elif result.status is ScanStatus.PARTIAL:
+            elif result.status is ScanRunStatus.PARTIAL:
                 st.warning(f"Partial import: {result.record_count} rows retained; resolve the blocking anomaly task before verification.")
-            elif result.status is ScanStatus.IDEMPOTENT_REPLAY:
+            elif result.status is ScanRunStatus.IDEMPOTENT_REPLAY:
                 st.info("Retry key matched an earlier scan; no duplicate import was created.")
             else:
                 st.success(f"Scan succeeded: {result.record_count} normalized public rows.")

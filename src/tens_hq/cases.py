@@ -14,7 +14,7 @@ from datetime import date
 from enum import Enum
 from typing import Any, Mapping
 
-from .locations import Location, normalize_location
+from .locations import Location
 
 
 class CaseValidationError(ValueError):
@@ -183,18 +183,6 @@ class Case:
         object.__setattr__(self, "job_family_requirements", tuple(str(value).strip() for value in self.job_family_requirements if str(value).strip()))
 
     @property
-    def status(self) -> CaseState:
-        """Alias for UIs that call the state field ``status``."""
-
-        return self.state
-
-    @property
-    def case_state(self) -> CaseState:
-        """Explicit alias for callers that want to avoid ``state`` ambiguity."""
-
-        return self.state
-
-    @property
     def city(self) -> str:
         return self.location.city
 
@@ -229,39 +217,6 @@ class Case:
         }
 
 
-@dataclass(frozen=True, slots=True)
-class CaseCreate:
-    """Input value object accepted by :meth:`CaseRepository.create_case`."""
-
-    title: str
-    city: str
-    state: str
-    postal_code: str | None = None
-    team_alias: str = "bd"
-    role_alias: str = "owner"
-    case_id: str | None = None
-    contract_type: str | None = None
-    service_type: str | None = None
-    target_headcount: int | None = None
-    target_start_date: str | None = None
-    job_family_requirements: tuple[str, ...] = ()
-
-    def to_location(self) -> Location:
-        return normalize_location(self.city, self.state, self.postal_code)
-
-
-@dataclass(frozen=True, slots=True)
-class CaseUpdate:
-    """Optional public case fields for optimistic updates."""
-
-    title: str | None = None
-    city: str | None = None
-    state: str | None = None
-    postal_code: str | None = None
-    team_alias: str | None = None
-    role_alias: str | None = None
-
-
 def ensure_transition(current: CaseState | str, target: CaseState | str) -> tuple[CaseState, CaseState]:
     """Validate the state graph and return normalized states.
 
@@ -280,10 +235,7 @@ def ensure_transition(current: CaseState | str, target: CaseState | str) -> tupl
 __all__ = [
     "ALLOWED_TRANSITIONS",
     "Case",
-    "CaseCreate",
     "CaseState",
-    "CaseStatus",
-    "CaseUpdate",
     "CaseValidationError",
     "ROLE_ALIASES",
     "TEAM_ALIASES",
@@ -292,6 +244,3 @@ __all__ = [
     "normalize_role_alias",
     "normalize_team_alias",
 ]
-
-# A compatibility name used by callers that prefer status terminology.
-CaseStatus = CaseState

@@ -11,10 +11,7 @@ handoff is a claim from a snapshot, never packet evidence:
   is display-only and must never be written into the analyst set-aside input
   -- that would launder a Radar claim into "analyst-entered".
 * **Every value renders as a labeled claim, caveat-first (§1.3).** All of it
-  goes through this module's own ``_md`` escape chokepoint, exactly like
-  ``opportunity_packet.py`` / ``pl_match.py`` / ``eligibility_gate.py`` (the
-  anti-circular-import convention this module simply follows: each renderer
-  keeps its own narrow ``_MD_ESCAPE`` copy rather than importing one).
+  goes through the shared :mod:`tens_hq._markdown` escape chokepoint.
 * **Three honest field states, not two.** Within ``claims``, a member key
   that is simply absent and a member key that is explicitly JSON ``null``
   both collapse to Python ``None`` here -- the parser does not retain which
@@ -50,6 +47,8 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
+
+from ._markdown import _md
 
 RADAR_HANDOFF_SCHEMA_VERSION = "radar-handoff/v1"
 
@@ -373,26 +372,6 @@ RADAR_HANDOFF_SYNTHETIC_SUPERSEDES = (
 _NOT_IN_HANDOFF = "Not in handoff"
 _NOT_STATED_IN_HANDOFF = "Not stated in handoff"
 _SET_ASIDE_NOT_REPORTED = "not reported in snapshot (null)"
-
-
-# A Radar-supplied claim string is interpolated into Markdown rendered by
-# ``st.markdown``. Keep the same deliberately narrow escape set every other
-# packet renderer uses (link/code/emphasis/autolink syntax only) -- this is a
-# LOCAL copy, not an import, matching the established anti-circular-import
-# convention (see ``packet_export.py``'s own note on the same choice).
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    # Flatten every line-boundary class BEFORE escaping (the A7 export-layer
-    # fix, packet_export._md): an embedded newline in an uploaded claim string
-    # would otherwise escape its "Radar-claimed" bullet and forge top-level
-    # Markdown structure (a heading, a bullet) in the on-screen packet AND the
-    # verbatim export body. Character escaping alone cannot stop that.
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
 
 
 def _claim_text(value: str | None) -> str:

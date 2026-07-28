@@ -43,9 +43,9 @@ from .staffing_whatif import StaffingWhatIfResult, WhatIfState
 # --- Local copies of standing constants (anti-circular-import convention) --
 #
 # r2a_map.py is imported BY opportunity_packet.py (to render this section),
-# so it cannot import anything back FROM opportunity_packet -- the same
-# established rule incumbent_leads.py / packet_export.py already follow for
-# their local ``_md`` copies. The routing-rail requirement (audit MAJOR) is
+# so it cannot import anything back FROM opportunity_packet. Markdown escaping
+# avoids that cycle through :mod:`tens_hq._markdown`. The routing-rail
+# requirement (audit MAJOR) is
 # to REPRODUCE the geography disclaimer INLINE, not merely cite the section
 # -- a local, verbatim copy satisfies both constraints at once. A test locks
 # this string byte-identical to ``opportunity_packet.GEOGRAPHY_CONTEXT_

@@ -37,6 +37,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
+from ._markdown import _md
 from .connectors import NormalizedRecord, service_location_matches
 
 
@@ -208,26 +209,6 @@ R2B_SAMPLE_SYNTHETIC = (
     "EXAMPLE DATA -- this cross-reference used the bundled SYNTHETIC sample "
     "workbook, not the official Procurement List. Findings are illustrative only."
 )
-
-
-# A workbook-supplied value (Service Type, CNA, location) and the uploaded
-# filename are interpolated into Markdown that is rendered with st.markdown. HTML
-# is already inert (unsafe_allow_html is never set on this path), but Markdown
-# link/emphasis/code syntax is not -- an unescaped value could forge a clickable
-# "source" link inside a packet whose whole value is provenance integrity. Escape
-# the inline-Markdown metacharacters at this single render chokepoint. The set is
-# deliberately narrow (no ``_ . -``) so ordinary filenames, dates, and ZIPs are
-# left readable while links/code/emphasis/autolinks are neutralized.
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    # A line break is itself structural injection; flatten every line boundary
-    # to a space before escaping.
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
 
 
 def _provenance_line(result: PLMatchResult) -> str:

@@ -18,6 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from ._markdown import _md
+
 
 class EligibilityState(str, Enum):
     """Three-state interpretation of an analyst-entered set-aside value."""
@@ -184,22 +186,6 @@ def assess_eligibility(raw_set_aside: str | None) -> EligibilityGate:
         set_aside_family=_SET_ASIDE_FAMILIES.get(normalized),
         recognized=label is not None,
     )
-
-
-# Raw analyst input is interpolated into Markdown rendered by st.markdown at the
-# packet boundary.  Escape the same deliberately narrow metacharacter set used
-# by pl_match.py: link, code, emphasis, and autolink syntax are neutralized,
-# while ordinary code characters such as ``_ . -`` stay readable. A line break
-# is itself structural injection; flatten every line boundary to a space before
-# escaping.
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
 
 
 def _state_headline(state: EligibilityState) -> str:

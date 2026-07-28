@@ -36,32 +36,8 @@ analyst pulled it), omitted entirely otherwise -- a real, empty
 
 from __future__ import annotations
 
+from ._markdown import _md, _reported
 from .connectors.federal_register import FRNoticeRecord, PLNoticesResult
-
-# A LOCAL copy, exactly like incumbent_leads.py / pl_match.py /
-# packet_export.py / radar_handoff.py. This module cannot import ``_md`` from
-# opportunity_packet: that module imports THIS one to render its section, so
-# the reverse import would be circular (see pl_match.py:221-227 for the
-# established convention this follows).
-#
-# FR-supplied strings (titles especially) are untrusted (the A2 lesson,
-# packet_export._md): flatten every line-boundary class BEFORE escaping, or
-# an embedded newline in a notice title could forge a top-level Markdown
-# heading in the rendered packet and its verbatim cited export body.
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
-
-
-def _reported(value: object) -> str:
-    if value is None or not str(value).strip():
-        return "Not reported"
-    return _md(value)
 
 
 # A URL-safe sibling of ``_md``/``_reported`` (§5.8 fix): FR API URLs
@@ -81,7 +57,7 @@ def _md_url(value: object) -> str:
         ch in flat for ch in (" ", "\t", "<", ">", "|")
     ):
         return f"<{flat}>"
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
+    return _md(flat)
 
 
 def _reported_url(value: object) -> str:

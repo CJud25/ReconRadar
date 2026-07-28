@@ -466,15 +466,15 @@ def test_whitespace_place_component_never_claims_a_prefill(monkeypatch) -> None:
     assert not any("Prefilled empty place inputs" in value for value in success_values)
 
 
-def test_inline_md_flattens_and_escapes_toast_interpolations() -> None:
+def test_shared_md_flattens_and_escapes_toast_interpolations() -> None:
     """Upstream-fed values interpolated into Markdown-rendered toasts cannot
     forge structure: line boundaries flatten to spaces and link/code/emphasis
-    syntax is escaped (the packet renderers' vendored _md discipline)."""
+    syntax is escaped through the packet renderers' shared helper."""
 
-    from tens_hq.bd_page import _inline_md
+    from tens_hq._markdown import _md
 
     hostile = "FORT BELVOIR\n## CLEARED\r\n[x](javascript:alert(1))`code`*em*"
-    flat = _inline_md(hostile)
+    flat = _md(hostile)
     assert "\n" not in flat and "\r" not in flat
     assert "\\[" in flat and "\\(" in flat and "\\`" in flat and "\\*" in flat
 

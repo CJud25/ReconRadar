@@ -175,3 +175,36 @@ def test_render_escapes_markdown_in_untrusted_raw_value() -> None:
 
     assert "](http://evil)" not in rendered
     assert "\\[x\\]\\(http://evil\\)" in rendered
+
+
+def test_md_flattens_newlines_in_untrusted_values() -> None:
+    rendered = _render("NONE\n# forged heading")
+
+    assert "\n# forged heading" not in rendered
+    assert "NONE # forged heading" in rendered
+
+
+def test_barred_renders_name_the_mandatory_source_lane_as_unassessed() -> None:
+    for raw in ("8A", "iee", "sbp", "ZZZ"):
+        rendered = _render(raw)
+
+        assert "FAR 8.002" in rendered
+        assert "Procurement List" in rendered
+        assert "not assessed by this gate" in rendered
+        assert rendered.index("FAR 8.002") < rendered.index("R1-teaming")
+        assert rendered.index("R1-teaming") < rendered.index("Raw set-aside")
+
+
+def test_mandatory_source_lane_absent_from_unknown_and_unrestricted() -> None:
+    for raw in (None, "", "NONE"):
+        rendered = _render(raw)
+
+        assert "FAR 8.002" not in rendered
+        assert "Procurement List" not in rendered
+
+
+def test_barred_headline_scopes_the_bar_to_the_prime_lane() -> None:
+    for raw in ("8A", "ZZZ"):
+        assert "### SET_ASIDE_BARRED (set-aside prime lane)" in _render(raw)
+    for raw in (None, "NONE"):
+        assert "### SET_ASIDE_BARRED (set-aside prime lane)" not in _render(raw)

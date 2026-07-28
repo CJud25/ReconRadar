@@ -449,6 +449,15 @@ def test_hostile_directory_matched_name_is_escaped() -> None:
     assert "](http://evil2)" not in rendered
 
 
+def test_md_flattens_newlines_in_untrusted_values() -> None:
+    cf = _cf()
+    sub = _sub(SubawardRecord("1", "x\n# forged heading", 100.0, "2025-01-01", "d"))
+    assessment = derive_incumbent_leads(cf, subawards=sub)
+    rendered = _render(assessment, cf)
+    assert "\n# forged heading" not in rendered
+    assert "x # forged heading" in rendered
+
+
 def test_long_description_is_clamped_before_escaping() -> None:
     # 400 markdown-hostile chars: the clamp must cut to 280 + "..." on the RAW
     # string and the survivors must all still be escaped (no bypass via the cut).

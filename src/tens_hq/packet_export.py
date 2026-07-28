@@ -479,13 +479,21 @@ def derive_source_manifest(
             if subawards.truncated
             else ""
         )
+        source = "Subaward records (live, USAspending FSRS/FFATA)"
+        assurance = _ASSURANCE_API_RETRIEVED
+        if contract_facts is not None and contract_facts.synthetic_example:
+            # ADR-025: the offline fixture's subaward provenance follows the
+            # synthetic award chain even when its source fields differ.
+            source = "Subaward records (SYNTHETIC example, offline)"
+            assurance = _ASSURANCE_SYNTHETIC_EXAMPLE
+            notes = "SYNTHETIC example — not real USAspending data. " + notes
         entries.append(
             SourceEntry(
-                source="Subaward records (live, USAspending FSRS/FFATA)",
+                source=source,
                 reference=subawards.source_url,
                 retrieved_at=subawards.retrieved_at,
-                assurance=_ASSURANCE_API_RETRIEVED,
-                notes=notes,
+                assurance=assurance,
+                notes=notes.strip(),
             )
         )
 

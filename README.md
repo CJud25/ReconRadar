@@ -66,7 +66,9 @@ Work one page, top to bottom; the packet re-renders as evidence attaches:
    time. A PIID shared by several awards is disambiguated by the analyst, never
    auto-picked.
 3. **Eligibility gate** — reads the live set-aside code. Blank means Unknown,
-   never "unrestricted." A gate, not a score.
+   never "unrestricted." A gate, not a score. A set-aside bar closes the
+   prime-as-set-aside lane only; the AbilityOne mandatory-source lane (FAR 8.7)
+   is separate and not assessed.
 4. **Capture window** — an honest band for the likely follow-on solicitation and
    the R2a start-by date. Negative runway is reported, not hidden.
 5. **Incumbent & teaming leads** — subaward records and NPA-directory

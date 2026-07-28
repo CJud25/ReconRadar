@@ -21,6 +21,7 @@ _MODULE_PATHS = sorted(
     if "__pycache__" not in path.parts
 )
 _LOCAL_MD_DEFINITION = re.compile(r"\bdef _md\(")
+_LOCAL_REPORTED_DEFINITION = re.compile(r"\bdef _reported\(")
 
 
 def _uses_md(path: Path) -> bool:
@@ -33,8 +34,23 @@ def _uses_md(path: Path) -> bool:
     )
 
 
+def _imports_reported(path: Path) -> bool:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    return any(
+        isinstance(node, ast.ImportFrom)
+        and node.module in {"_markdown", "tens_hq._markdown"}
+        and any(alias.name == "_reported" for alias in node.names)
+        for node in ast.walk(tree)
+    )
+
+
 _MD_CONSUMER_PATHS = sorted(
     path for path in _MODULE_PATHS if path != _MARKDOWN_PATH and _uses_md(path)
+)
+_REPORTED_IMPORTER_PATHS = sorted(
+    path
+    for path in _MODULE_PATHS
+    if path != _MARKDOWN_PATH and _imports_reported(path)
 )
 
 
@@ -71,6 +87,16 @@ def test_no_local_md_definitions_outside_shared_module() -> None:
     assert local_definitions == []
 
 
+def test_no_local_reported_definitions_outside_shared_module() -> None:
+    local_definitions = [
+        path
+        for path in _MODULE_PATHS
+        if path != _MARKDOWN_PATH
+        and _LOCAL_REPORTED_DEFINITION.search(path.read_text(encoding="utf-8"))
+    ]
+    assert local_definitions == []
+
+
 @pytest.mark.parametrize(
     "module_path",
     _MD_CONSUMER_PATHS,
@@ -79,6 +105,16 @@ def test_no_local_md_definitions_outside_shared_module() -> None:
 def test_md_consumers_import_the_shared_function(module_path: Path) -> None:
     module = _import_module(module_path)
     assert module._md is _markdown._md
+
+
+@pytest.mark.parametrize(
+    "module_path",
+    _REPORTED_IMPORTER_PATHS,
+    ids=[path.stem for path in _REPORTED_IMPORTER_PATHS],
+)
+def test_reported_importers_import_the_shared_function(module_path: Path) -> None:
+    module = _import_module(module_path)
+    assert module._reported is _markdown._reported
 
 
 def test_md_flattens_line_boundaries_before_escaping() -> None:

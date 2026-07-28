@@ -474,15 +474,11 @@ class WorkbookScanner:
         The official exports are national directories.  Persisting every row
         against one city case would turn directory presence into misleading
         local evidence, so scope is exact city/state and optional ZIP matching
-        with no proximity or substring inference.  Repositories without the
-        case-location API retain the protocol's full normalized set.
+        with no proximity or substring inference.
         """
 
-        get_case = getattr(self.repository, "get_case", None)
-        if get_case is None:
-            return tuple(records), ()
         try:
-            case = get_case(case_id)
+            case = self.repository.get_case(case_id)
         except Exception:
             raise ScanFailure("REPOSITORY") from None
         if case is None:

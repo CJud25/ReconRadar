@@ -50,6 +50,8 @@ import math
 from dataclasses import dataclass
 from enum import Enum
 
+from ._markdown import _md
+
 WHATIF_VERSION = "WHATIF-1.0"
 
 
@@ -362,16 +364,6 @@ STAFFING_CODE_07_NOTE = (
     "Code 07 (pending disability documentation) renders for context only — "
     "it is never counted in the numerator or the denominator."
 )
-
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
-
 
 def _count(value: float) -> str:
     # Raw hour/FTE counts render thousands-separated, never in scientific

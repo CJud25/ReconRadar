@@ -18,6 +18,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from ._markdown import _md
 from .case_store import CaseRepository
 from .cases import ROLE_ALIASES, TEAM_ALIASES
 from .connectors import (
@@ -46,7 +47,7 @@ from .packet_export import (
 from .pl_match import find_pl_service_matches
 from .radar_handoff import RadarHandoffError, parse_radar_handoff
 from .roles import case_ledger_enabled
-from .scanner import ScanStatus, WorkbookScanner
+from .scanner import ScanRunStatus, WorkbookScanner
 from .staffing_whatif import StaffingWhatIfInput, WhatIfMode, assess_staffing_whatif
 
 # Packet-path `except Exception:` handlers log here before showing a public
@@ -93,18 +94,6 @@ _AWARD_PLACE_PREFILL_SUFFIX = (
     " Prefilled empty place inputs from the award's cited place of performance — "
     "confirm them."
 )
-
-# Toast messages render as Markdown, and prefill makes some interpolated inputs
-# upstream-fed, so they get the packet renderers' vendored _md treatment:
-# flatten line boundaries first (a line break is structural injection), then
-# escape link/code/emphasis syntax.
-_INLINE_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _inline_md(value: object) -> str:
-    flat = " ".join(str(value).splitlines())
-    return "".join(_INLINE_MD_ESCAPE.get(ch, ch) for ch in flat)
-
 
 def _prefill_award_place_inputs(record: ContractFactsRecord) -> bool:
     """Fill only blank domestic place inputs from the award's reported components."""
@@ -356,11 +345,11 @@ def _render_scan(repo: CaseRepository) -> None:
                 actor_role=actor_role,
                 retrieved_at=retrieved_at.strip() or None,
             )
-            if result.status is ScanStatus.FAILED:
+            if result.status is ScanRunStatus.FAILED:
                 st.error(f"Scan failed: {result.message or 'The workbook could not be processed.'}")
-            elif result.status is ScanStatus.PARTIAL:
+            elif result.status is ScanRunStatus.PARTIAL:
                 st.warning(f"Partial import: {result.record_count} rows retained; resolve the blocking anomaly task before verification.")
-            elif result.status is ScanStatus.IDEMPOTENT_REPLAY:
+            elif result.status is ScanRunStatus.IDEMPOTENT_REPLAY:
                 st.info("Retry key matched an earlier scan; no duplicate import was created.")
             else:
                 st.success(f"Scan succeeded: {result.record_count} normalized public rows.")
@@ -1188,8 +1177,8 @@ def _render_opportunity_packet() -> None:
                 }
                 st.success(
                     f"Cross-referenced {result.same_location_count} Procurement List "
-                    f"line(s) parsed to {_inline_md(worksite_city.strip())}, "
-                    f"{_inline_md(state_up)}."
+                    f"line(s) parsed to {_md(worksite_city.strip())}, "
+                    f"{_md(state_up)}."
                 )
             except ConnectorError as exc:
                 st.session_state.pop("op_packet_pl_result", None)

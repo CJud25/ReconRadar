@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Internal scanner and connector types now use the unambiguous names `ScanRunStatus` and `CaseRepositoryProtocol`, with no runtime behavior change.
+- Case creation and editing now use one scalar-field calling convention, and unused compatibility aliases and value objects were removed; live call behavior is unchanged.
+- The workbook scanner now calls the concrete case-store lifecycle directly; speculative adapter fallbacks were removed with no behavior change.
+- Packet and UI renderers now share one internal Markdown helper, preserving the existing flattening, escapes, and empty-value labels with no rendered-output change.
 - Packet Markdown sanitization now flattens line boundaries at the incumbent-leads, eligibility-gate, and Procurement List-match `_md` chokepoints, with a package-wide runtime sweep enforcing the invariant so user-controlled line breaks cannot forge packet structure.
 - Synthetic runs now label the Source manifest's subawards row as a synthetic example instead of implying live provenance, and the widened provenance sweep covers the fully populated packet surface.
 - Barred eligibility-gate renders now name the AbilityOne mandatory-source lane (FAR 8.002/8.7) as a separate, unassessed lane and scope the bar to the set-aside prime lane (ADR-029).

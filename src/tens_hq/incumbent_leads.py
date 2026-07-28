@@ -57,10 +57,7 @@ Honesty invariants (ADR-017):
   analyst review; any outreach decision is the analyst's.
 * **Markdown escaping.** Every API-derived string (recipient/subawardee
   names, descriptions, business categories, raw codes/dates) is escaped
-  through this module's OWN local ``_md``/``_MD_ESCAPE`` (mirrors
-  ``pl_match.py`` exactly) before it reaches ``Lead.text`` -- never imported
-  from :mod:`tens_hq.opportunity_packet`, which imports THIS module to render
-  it (importing back would be circular).
+  through :mod:`tens_hq._markdown` before it reaches ``Lead.text``.
 
 This module is pure (no Streamlit, no network, no case-store imports) and
 deterministic: subaward/directory ordering never depends on dict iteration
@@ -74,6 +71,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Sequence
 
+from ._markdown import _md, _reported
 from .connectors import ContractFactsRecord, SubawardRecord, SubawardsResult
 
 # FPDS extent-of-competition codes: A/D/F are the competed family; B/C/G are
@@ -143,30 +141,6 @@ class IncumbentLeads:
     subawards_truncated: bool
     directory_attached: bool
     directory_match_count: int
-
-
-# --- Markdown escape chokepoint -----------------------------------------------
-#
-# A LOCAL copy, exactly like pl_match.py:221-227. incumbent_leads.py cannot
-# import ``_md`` from opportunity_packet: opportunity_packet imports THIS
-# module to render its section, so that import would be circular. A line break
-# is itself structural injection; flatten every line boundary to a space before
-# escaping.
-
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
-
-
-def _reported(value: object) -> str:
-    if value is None or not str(value).strip():
-        return "Not reported"
-    return _md(value)
 
 
 def _display_date(value: object) -> str:

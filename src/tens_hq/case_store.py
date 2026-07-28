@@ -24,9 +24,7 @@ from typing import Any, Callable, Iterable, Iterator, Mapping
 
 from .cases import (
     Case,
-    CaseCreate,
     CaseState,
-    CaseUpdate,
     CaseValidationError,
     coerce_case_state,
     ensure_transition,
@@ -53,7 +51,7 @@ from .evidence import (
     fingerprint,
     row_fingerprint,
 )
-from .locations import Location, LocationValidationError, normalize_location
+from .locations import Location, normalize_location
 
 
 class CaseStoreError(RuntimeError):
@@ -577,17 +575,13 @@ class CaseRepository:
     # ------------------------------------------------------------------ cases
     def create_case(
         self,
-        title: str | CaseCreate | Mapping[str, Any] | None = None,
-        city: str | None = None,
-        state: str | None = None,
+        title: str,
+        city: str,
+        state: str,
         postal_code: str | None = None,
         *,
-        location: Location | None = None,
-        zip_code: str | None = None,
         team_alias: str = "bd",
         role_alias: str = "owner",
-        team: str | None = None,
-        role: str | None = None,
         case_id: str | None = None,
         contract_type: str | None = None,
         service_type: str | None = None,
@@ -595,45 +589,11 @@ class CaseRepository:
         target_start_date: str | None = None,
         job_family_requirements: Iterable[str] = (),
     ) -> Case:
-        """Create a Draft case and return it.
+        """Create a Draft case from scalar public fields and return it."""
 
-        ``title`` may be a :class:`CaseCreate` or mapping for adapter
-        convenience.  No owner/person ID parameter is accepted; team and role
-        are validated controlled aliases.
-        """
-
-        if isinstance(title, CaseCreate):
-            payload = title
-            title, city, state, postal_code = payload.title, payload.city, payload.state, payload.postal_code
-            team_alias, role_alias, case_id = payload.team_alias, payload.role_alias, payload.case_id
-            contract_type, service_type, target_headcount, target_start_date, job_family_requirements = payload.contract_type, payload.service_type, payload.target_headcount, payload.target_start_date, payload.job_family_requirements
-        elif isinstance(title, Mapping):
-            payload = dict(title)
-            title = payload.get("title")
-            city = payload.get("city", city)
-            state = payload.get("state", state)
-            postal_code = payload.get("postal_code", payload.get("zip_code", postal_code))
-            location = payload.get("location", location)
-            team_alias = payload.get("team_alias", payload.get("team", team_alias))
-            role_alias = payload.get("role_alias", payload.get("role", role_alias))
-            case_id = payload.get("case_id", case_id)
-            contract_type = payload.get("contract_type", contract_type)
-            service_type = payload.get("service_type", service_type)
-            target_headcount = payload.get("target_headcount", target_headcount)
-            target_start_date = payload.get("target_start_date", target_start_date)
-            job_family_requirements = payload.get("job_family_requirements", job_family_requirements)
-        if team is not None:
-            team_alias = team
-        if role is not None:
-            role_alias = role
         if not isinstance(title, str) or not title.strip():
             raise CaseValidationError("title is required")
-        if location is None:
-            if city is None or state is None:
-                raise LocationValidationError("city and state are required")
-            location = normalize_location(city, state, postal_code, zip_code=zip_code)
-        elif not isinstance(location, Location):
-            raise LocationValidationError("location must be a Location")
+        location = normalize_location(city, state, postal_code)
         team_alias = normalize_team_alias(team_alias)
         role_alias = normalize_role_alias(role_alias)
         if target_headcount is not None and (isinstance(target_headcount, bool) or not isinstance(target_headcount, int) or target_headcount <= 0):
@@ -788,47 +748,31 @@ class CaseRepository:
     def update_case(
         self,
         case_id: str,
-        expected_version: int | CaseUpdate | None = None,
+        expected_version: int | None = None,
         *,
         title: str | None = None,
         city: str | None = None,
         state: str | None = None,
         postal_code: str | None = None,
-        zip_code: str | None = None,
-        location: Location | None = None,
         team_alias: str | None = None,
         role_alias: str | None = None,
-        update: CaseUpdate | None = None,
     ) -> Case:
         """Optimistically update public case fields and increment ``version``."""
 
-        if isinstance(expected_version, CaseUpdate):
-            update = expected_version
-            expected_version = None
-        if update is not None:
-            title = update.title if update.title is not None else title
-            city = update.city if update.city is not None else city
-            state = update.state if update.state is not None else state
-            postal_code = update.postal_code if update.postal_code is not None else postal_code
-            team_alias = update.team_alias if update.team_alias is not None else team_alias
-            role_alias = update.role_alias if update.role_alias is not None else role_alias
         with self._transaction() as conn:
-            row = self._check_version(conn, case_id, expected_version if isinstance(expected_version, int) else None)
+            row = self._check_version(conn, case_id, expected_version)
             current_state = CaseState(row["state_name"])
             if current_state in {CaseState.SCANNING, CaseState.CLOSED}:
                 raise CaseValidationError(f"cannot update a {current_state.value} case")
             next_title = row["title"] if title is None else title
             if not isinstance(next_title, str) or not next_title.strip():
                 raise CaseValidationError("title is required")
-            if location is None and any(value is not None for value in (city, state, postal_code, zip_code)):
+            if any(value is not None for value in (city, state, postal_code)):
                 next_location = normalize_location(
                     city if city is not None else row["city"],
                     state if state is not None else row["state"],
                     postal_code if postal_code is not None else row["postal_code"],
-                    zip_code=zip_code,
                 )
-            elif location is not None:
-                next_location = location
             else:
                 next_location = Location(row["city"], row["state"], row["postal_code"])
             next_team = normalize_team_alias(team_alias) if team_alias is not None else row["team_alias"]
@@ -1320,33 +1264,6 @@ class CaseRepository:
                 for row in rows
             ]
 
-    # Obvious aliases for scanner/UI adapters.
-    complete_scan = finalize_scan
-    finish_scan = finalize_scan
-
-    def record_scan_result(
-        self,
-        scan_id: str,
-        rows: Iterable[Mapping[str, Any] | SourceRecord] | None = None,
-        **kwargs: Any,
-    ) -> ScanRun:
-        """Alias for :meth:`finalize_scan` used by scanner orchestration."""
-
-        return self.finalize_scan(scan_id, rows, **kwargs)
-
-    def scan(
-        self,
-        case_id: str,
-        source_kind: str,
-        workbook_name: str,
-        rows: Iterable[Mapping[str, Any] | SourceRecord],
-        **kwargs: Any,
-    ) -> ScanRun:
-        """Run a complete start/finalize cycle for synchronous adapters."""
-
-        run = self.start_scan(case_id, source_kind, workbook_name, **{key: value for key, value in kwargs.items() if key in {"workbook_sha256", "workbook_hash", "source_uri", "expected_version"}})
-        return self.finalize_scan(run.scan_id, rows, source_uri=kwargs.get("source_uri"), schema_fingerprint=kwargs.get("schema_fingerprint"))
-
     def fail_scan(self, scan_id: str, error_message: str, *, expected_version: int | None = None) -> ScanRun:
         """Mark a run failed and move the case back to a reviewable state."""
 
@@ -1652,8 +1569,6 @@ class CaseRepository:
             )
             return assess_readiness((*assessment.items, *task_items))
 
-    readiness_assessment = compute_readiness
-
     def upsert_readiness_item(
         self,
         case_id: str,
@@ -1683,8 +1598,6 @@ class CaseRepository:
             self._invalidate_case(conn, case_id, "readiness_item_updated", {"key": item.key, "state": item.state.value})
             row = conn.execute("SELECT * FROM readiness_items WHERE case_id=? AND item_key=?", (case_id, item.key)).fetchone()
             return ReadinessItem(row["item_key"], row["label"], row["state"], bool(row["is_blocking"]), tuple(self._decode_json(row["evidence_ids_json"], [])), row["note"])
-
-    set_readiness_item = upsert_readiness_item
 
     def list_tasks(
         self,
@@ -1919,18 +1832,10 @@ class CaseRepository:
             conn.execute("INSERT OR IGNORE INTO fingerprints(fingerprint,entity_type,entity_id,created_at) VALUES(?,?,?,?)", (fp, entity_type, entity_id, self._now()))
             return fp
 
-    fingerprint = put_fingerprint
-
-
-# Name used in the approved design and by scanner/UI integrations.
-CaseStore = CaseRepository
-
-
 __all__ = [
     "CaseEvent",
     "CaseNotFoundError",
     "CaseRepository",
-    "CaseStore",
     "CaseStoreError",
     "CaseEvent",
     "IntegrityError",

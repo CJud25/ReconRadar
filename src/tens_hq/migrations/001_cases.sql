@@ -1,7 +1,7 @@
 -- Durable public feasibility case/evidence tracker schema.
 --
 -- Migrations are additive and are intentionally free of DROP/DELETE/REPLACE
--- statements.  CaseStore runs this file only after enabling foreign keys.
+-- statements.  CaseRepository runs this file only after enabling foreign keys.
 
 CREATE TABLE IF NOT EXISTS schema_meta (
     key TEXT PRIMARY KEY,

@@ -74,6 +74,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Sequence
 
+from ._markdown import _md, _reported
 from .capture_window import assess_capture_window, capture_window_lines
 from .connectors import ContractFactsRecord, GeographyRecord, PLNoticesResult, SubawardsResult
 from .eligibility_gate import EligibilityGate, assess_eligibility, eligibility_gate_lines
@@ -98,26 +99,6 @@ PACKET_FRAMING = (
     "This is a cited evidence packet for analyst review. It contains no numeric "
     "rating, no ranking, and no pursue-or-decline recommendation."
 )
-
-
-# Values here feed single-line Markdown bullets rendered by ``st.markdown`` at
-# the UI boundary. Flatten every line boundary to a space first because a line
-# break is structural injection; then escape narrowly so ordinary federal codes
-# remain readable while link/code/emphasis syntax cannot be injected.
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
-
-
-def _reported(value: object) -> str:
-    if value is None or not str(value).strip():
-        return "Not reported"
-    return _md(value)
 
 
 def _safe_date(value: object) -> str:

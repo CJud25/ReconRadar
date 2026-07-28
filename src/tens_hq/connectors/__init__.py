@@ -31,7 +31,7 @@ from .api import (
 from .base import (
     WORKBOOK_SOURCE_KINDS,
     Assurance,
-    CaseRepository,
+    CaseRepositoryProtocol,
     ConnectorError,
     ConnectorResult,
     IdempotencyStore,
@@ -104,7 +104,7 @@ __all__ = [
     "AbilityOneConnector",
     "AbilityOneServicesConnector",
     "AbilityOneWorkbookConnector",
-    "CaseRepository",
+    "CaseRepositoryProtocol",
     "ConnectorError",
     "ConnectorResult",
     "CountyFips",

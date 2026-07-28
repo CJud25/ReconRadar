@@ -193,7 +193,7 @@ def test_hostile_title_is_escaped() -> None:
 
 
 def test_newline_in_title_cannot_forge_markdown_structure() -> None:
-    # The A2 lesson (packet_export._md / radar_handoff._md), applied to
+    # The A2 lesson (tens_hq._markdown._md), applied to
     # FR-supplied strings: an embedded newline must never escape its bullet
     # and forge a top-level heading in the rendered packet or its verbatim
     # cited export body.

@@ -31,11 +31,8 @@ attached"), never a negative claim about the contract or the world.
 
 This module is pure (no Streamlit, no network, no case-store imports) and
 deterministic: ``as_of`` is always caller-supplied; nothing here calls
-``datetime.now()``. It has its own LOCAL Markdown-escape copy -- mirrors
-``incumbent_leads.py`` / ``pl_match.py`` exactly -- and does NOT import ``_md``
-from :mod:`tens_hq.opportunity_packet` (an unrelated, established
-anti-circular-import convention this module simply follows; only
-``PACKET_FRAMING`` is imported from there). See ADR-018.
+``datetime.now()``. Packet-side strings use the shared
+:mod:`tens_hq._markdown` escape boundary. See ADR-018.
 """
 
 from __future__ import annotations
@@ -45,6 +42,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Sequence
 
+from ._markdown import _md, _reported
 from .connectors import ContractFactsRecord, GeographyRecord, PLNoticesResult, SubawardsResult
 from .opportunity_packet import PACKET_FRAMING
 from .pl_activity import PL_ACTIVITY_NO_PULL, PL_ACTIVITY_SECTION_NAME
@@ -624,35 +622,8 @@ def packet_export_filename(piid: str, as_of: datetime) -> str:
     return f"opportunity-packet-{sanitized}-{stamp}.md"
 
 
-# --- Markdown escape chokepoint -------------------------------------------
-#
-# A LOCAL copy, exactly like incumbent_leads.py / pl_match.py. This module
-# cannot import ``_md`` from opportunity_packet (the established anti-
-# circular-import rule; see pl_match.py:221-227) -- it imports only the
-# unrelated ``PACKET_FRAMING`` constant from there.
-
-_MD_ESCAPE = {ch: "\\" + ch for ch in "\\`*[]()<>"}
-
-
-def _md(value: object) -> str:
-    if value is None:
-        return ""
-    # This module's _md feeds single-line contexts only (header bullets and
-    # table cells), where a line break is itself structural injection: an
-    # uploaded filename may legally contain one and would split a manifest
-    # table row. Flatten every line boundary to a space before escaping.
-    flat = " ".join(str(value).splitlines())
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
-
-
-def _reported(value: object) -> str:
-    if value is None or not str(value).strip():
-        return "Not supplied"
-    return _md(value)
-
-
 def _cell(value: object) -> str:
-    """Two-layer table-cell escaping (§3): the local ``_md`` copy, THEN ``|`` -> ``/``."""
+    """Two-layer table-cell escaping (§3): shared ``_md``, THEN ``|`` -> ``/``."""
 
     return _md(value).replace("|", "/")
 
@@ -676,7 +647,7 @@ def _md_url(value: object) -> str:
         ch in flat for ch in (" ", "\t", "<", ">", "|")
     ):
         return f"<{flat}>"
-    return "".join(_MD_ESCAPE.get(ch, ch) for ch in flat)
+    return _md(flat)
 
 
 def _cell_url(value: object) -> str:
@@ -760,13 +731,17 @@ def assemble_packet_export(
     unit-testable in isolation.
     """
 
-    state_text = _reported(state.strip().upper()) if state and state.strip() else "Not supplied"
+    state_text = (
+        _reported(state.strip().upper(), empty="Not supplied")
+        if state and state.strip()
+        else "Not supplied"
+    )
     header_lines = [
         PACKET_EXPORT_TITLE,
         "",
         f"- As of: {as_of.isoformat()}",
-        f"- PIID: {_reported(piid)}",
-        f"- Place of performance: {_reported(county)}, {state_text}",
+        f"- PIID: {_reported(piid, empty='Not supplied')}",
+        f"- Place of performance: {_reported(county, empty='Not supplied')}, {state_text}",
         f"- {PACKET_FRAMING}",
         f"- {EXPORT_ATTESTATION_DISCLAIMER}",
         f"- {EXPORT_WORKBOOK_NOT_RETAINED}",

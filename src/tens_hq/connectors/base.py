@@ -305,35 +305,59 @@ class WorkbookConnector(Protocol):
 
 
 @runtime_checkable
-class CaseRepository(Protocol):
+class CaseRepositoryProtocol(Protocol):
     """Minimal repository contract consumed by :mod:`tens_hq.scanner`.
 
-    The concrete case-store may provide additional methods.  The scanner uses
-    feature detection for optional methods, but these calls define the clean
-    integration seam expected by the product design.
+    The concrete case-store provides additional methods; this protocol records
+    only the calls used by the scanner.
     """
 
     def start_scan(
         self,
         case_id: str,
-        source_kind: SourceKind | str,
-        idempotency_key: str | None,
-        snapshot: Mapping[str, Any],
+        source_kind: str,
+        workbook_name: str,
+        *,
+        workbook_sha256: str | None = None,
+        source_uri: str | None = None,
+        idempotency_key: str | None = None,
+        snapshot: Mapping[str, Any] | None = None,
+        expected_version: int | None = None,
     ) -> Any:
         ...
 
-    def persist_source_records(self, run_id: str, records: Sequence[NormalizedRecord]) -> Any:
+    def get_case(self, case_id: str) -> Any | None:
         ...
 
-    def finalize_scan(self, run_id: str, status: str, **details: Any) -> Any:
+    def get_scan(self, scan_id: str) -> Any | None:
         ...
 
-    def reconcile_source(
+    def list_resources(
         self,
-        run_id: str,
-        source_kind: SourceKind | str,
-        observed_hashes: Iterable[str],
+        case_id: str,
+        *,
+        source_kind: str | None = None,
+        current_only: bool = False,
+    ) -> list[Any]:
+        ...
+
+    def finalize_scan(
+        self,
+        scan_id: str,
+        rows: Iterable[Mapping[str, Any]] | None = None,
+        *,
+        success: bool = True,
+        status: str | None = None,
+        schema_fingerprint: str | None = None,
+        source_row_count: int | None = None,
+        excluded_row_count: int = 0,
+        unparsed_rows: int = 0,
+        rejected_rows: int = 0,
+        excluded_records: Iterable[Mapping[str, Any]] = (),
     ) -> Any:
+        ...
+
+    def fail_scan(self, scan_id: str, error_message: str) -> Any:
         ...
 
 
@@ -378,7 +402,7 @@ def utc_now() -> datetime:
 
 __all__ = [
     "Assurance",
-    "CaseRepository",
+    "CaseRepositoryProtocol",
     "ConnectorError",
     "ConnectorResult",
     "IdempotencyStore",
